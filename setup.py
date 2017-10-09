@@ -7,40 +7,31 @@ if sys.argv[-1] == 'publish':
     sys.exit()
 
 setup(
-    name='appurl',
-    version='0.1.7',
-    url='https://github.com/CivicKnowledge/appurl',
+    name='publicdata',
+    version='0.0.1',
+    url='https://github.com/CivicKnowledge/publicdata',
     license='MIT',
     author='Eric Busboom',
     author_email='eric@busboom.org',
     description='Url manipulation for extended application urls',
-    packages=['appurl','appurl.archive','appurl.file','appurl.web'],
+    packages=['publicdata'],
     zip_safe=True,
     install_requires=[
         'fs >= 2',
-        'boto',
-        'requests'
+        'appurl',
+        'rowgenerators'
+        'pandas',
+        'requests',
+        'geoid'
         ],
-    entry_points = {
-        'appurl.urls' : [
-            "* = appurl.url:Url",
+    entry_points={
+        'appurl.urls': [
+            "censusreporter: = pandasreporter.censusreporter:CensusReporterURL"
+        ],
+        'rowgenerators': [
+            "CRJSON+ = pandasreporter.censusreporter:CensusReporterSource"
 
-            # Web Urls
-            "http: = appurl.web.web:WebUrl",
-            "https: = appurl.web.web:WebUrl",
-            "s3: = appurl.web.s3:S3Url",
-            "socrata+ = appurl.web.socrata:SocrataUrl",
-            #
-            # Archive Urls
-            ".zip = appurl.archive.zip:ZipUrl",
-            #
-            # File Urls
-            ".csv = appurl.file.csv:CsvFileUrl",
-            ".xlsx = appurl.file.excel:ExcelFileUrl",
-            ".xls = appurl.file.excel:ExcelFileUrl",
-            "file: = appurl.file.file:FileUrl",
-            "program+ = appurl.file.program:ProgramUrl",
-            "python: = appurl.file.python:PythonUrl",
         ]
-    }
+
+    },
 )

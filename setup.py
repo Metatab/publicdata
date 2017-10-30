@@ -8,7 +8,7 @@ if sys.argv[-1] == 'publish':
 
 setup(
     name='publicdata',
-    version='0.0.1',
+    version='0.0.2',
     url='https://github.com/CivicKnowledge/publicdata',
     license='MIT',
     author='Eric Busboom',
@@ -19,7 +19,7 @@ setup(
     install_requires=[
         'fs >= 2',
         'appurl',
-        'rowgenerators'
+        'rowgenerators',
         'pandas',
         'requests',
         'geoid'

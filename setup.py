@@ -13,7 +13,7 @@ setup(
     license='MIT',
     author='Eric Busboom',
     author_email='eric@busboom.org',
-    description='Url manipulation for extended application urls',
+    description='Appurl And Rowgenerators for public datasets',
     packages=['publicdata'],
     zip_safe=True,
     install_requires=[

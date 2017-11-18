@@ -18,57 +18,6 @@ class NlsySource(Source):
     pass
 
 
-def variable_labels(ref):
-    """
-    Given a Metapack reference Term that references a downloaded NLSY data set,
-    return a Pandas dataframe with metadata about the variables included in the data package.
-
-    First, download data dataset from the NLS Investigator, and store it locally. When downloading,
-    use the "Advanced Download" tab, and be sure that "Short Description File" is checked.  In this example,
-    the downloaded zip file is stored in the ``data`` directory, which is in the same directory
-    as the ``metatab.csv`` file.
-
-    The, add a Reference term to a Metapack metadata file, as shown below in Metatab Line Format:
-
-        Section: References
-        Reference: data/shiftwork.zip#.*.sdf
-        Reference.Name: var_list
-
-
-    Them to call this function, in this case, from an IPython notebook in the datapackage:
-
-    >>> import metatab as mt
-    >>> pack = mt.jupyter.open_package()
-    >>> variable_labels(pack.reference('var_list'))
-
-    :param ref a Metapack Refernce Term:
-    :return: a pandas dataframe
-    """
-    import pandas as pd
-
-    t = ref.resolved_url.get_resource().get_target()
-
-    vdf = pd.read_fwf(t.path, header=1, skiprows=[0, 1, 4])
-
-    vdf['Number'] = vdf['Number'].str.replace('.', '')
-    vdf['question_root'] = vdf['Question Name'].str.replace(r'\.\d+$', '').str.replace(r'-|\!', '_')
-    vdf['employer_no'] = vdf['Question Name'].str.extract(r'\.(\d+)', expand=False).fillna(0).astype(int)
-
-
-    vdf.set_index('Number', inplace=True)
-
-    vdf.rename(columns={
-        'Year': 'year',
-        'Variable Description': 'description',
-        'Question Name': 'question_name'
-    }, inplace=True)
-
-    vdf.index.name = 'var_name'
-
-    return vdf
-
-
-
 class NLSY(object):
 
     respondent_cols = None # Columns for variables that are about the respondent, across years.
@@ -83,13 +32,70 @@ class NLSY(object):
         self._question_groups = None
         self._var_labels = None
 
+    def _variable_labels(self, ref):
+        """
+        Given a Metapack reference Term that references a downloaded NLSY data set,
+        return a Pandas dataframe with metadata about the variables included in the data package.
+
+        First, download data dataset from the NLS Investigator, and store it locally. When downloading,
+        use the "Advanced Download" tab, and be sure that "Short Description File" is checked.  In this example,
+        the downloaded zip file is stored in the ``data`` directory, which is in the same directory
+        as the ``metatab.csv`` file.
+
+        The, add a Reference term to a Metapack metadata file, as shown below in Metatab Line Format:
+
+            Section: References
+            Reference: data/shiftwork.zip#.*.sdf
+            Reference.Name: var_list
+
+
+        Them to call this function, in this case, from an IPython notebook in the datapackage:
+
+        >>> import metatab as mt
+        >>> pack = mt.jupyter.open_package()
+        >>> variable_labels(pack.reference('var_list'))
+
+        :param ref a Metapack Refernce Term:
+        :return: a pandas dataframe
+        """
+        import pandas as pd
+
+        t = ref.resolved_url.get_resource().get_target()
+
+        vdf = pd.read_fwf(t.path, header=1, skiprows=[0, 1, 4])
+
+        vdf['Number'] = vdf['Number'].str.replace('.', '')
+
+        def extract_parts(v):
+            parts = v.split('.')
+            parts += [float('nan')] * (4 - len(parts))
+            parts[0] = parts[0].replace('!', '_').replace('-','_')  # KEY!SEX -> KEY_SEX
+            return parts
+
+        vdf['question_root'] = vdf['Question Name'].apply(lambda v: extract_parts(v)[0])
+        vdf['dim_1'] = vdf['Question Name'].apply(lambda v: extract_parts(v)[1])
+        vdf['dim_2'] = vdf['Question Name'].apply(lambda v: extract_parts(v)[2])
+        vdf['dim_3'] = vdf['Question Name'].apply(lambda v: extract_parts(v)[3])
+
+        vdf.set_index('Number', inplace=True)
+
+        vdf.rename(columns={
+            'Year': 'year',
+            'Variable Description': 'description',
+            'Question Name': 'question_name'
+        }, inplace=True)
+
+        vdf.index.name = 'var_name'
+
+        return vdf
+
     @property
     def var_labels(self):
         """Return a dataframe of the metadata for all of the variables."""
         if self._var_labels is None:
             r = copy(self._data_ref)
             r.url += '#.*\.sdf'
-            self._var_labels = variable_labels(r)
+            self._var_labels = self._variable_labels(r)
 
             # XRND, cross round, in NLYS97, question asked in various years
             # 78SCRN, NLSY79 screening question
@@ -106,7 +112,7 @@ class NLSY(object):
     def questions(self):
         """Like var_labels(), but return only one row per question"""
         return self.var_labels[['question_root', 'description']] \
-            .set_index('question_root').sort_index().drop_duplicates()
+            .drop_duplicates(subset=['question_root']).set_index('question_root').sort_index()
 
     @property
     def data(self):
@@ -142,9 +148,15 @@ class NLSY(object):
     def question_names(self):
         return list(self.question_groups.groups.keys())
 
-    def question_frame(self, qn, employer_index = False):
-        """Return the dataframe from the question groups for a specific question"""
+    def question_frame(self, qn, column_name=None, dim_1_index = False, dim_2_index = False, dim_3_index = False):
+        """Return the dataframe from the question groups for a specific question
 
+        :param qn:
+        :param column_name:
+        :param employer_index:
+        :return:
+
+        """
 
         # All of the variable names for the question
         q_vars = list(self.question_groups.get_group(qn).var_name)
@@ -152,25 +164,49 @@ class NLSY(object):
         _ = self.data[q_vars].stack().to_frame()  # Move the var_names to the index, so we can merge with metadata
         _.index.names = ['case_id', 'var_name']
 
-        if employer_index:
-            vl_cols = ['year', 'employer_no']
-            index_cols = ['case_id', 'year', 'employer_no']
-        else:
-            vl_cols = ['year']
-            index_cols = ['case_id', 'year']
+        dim_1_name = 'dim_1'
+        dim_2_name = 'dim_2'
+        dim_3_name = 'dim_3'
 
-        df = (_.join(self.var_labels[vl_cols]) \
-              .reset_index().set_index(index_cols) \
-              .drop('var_name', axis=1) \
-              .rename(columns={0: qn}))
+        dim_1_rename = dim_1_name if not isinstance(dim_1_index, str) else dim_1_index
+        dim_2_rename = dim_2_name if not isinstance(dim_2_index, str) else dim_2_index
+        dim_3_rename = dim_3_name if not isinstance(dim_3_index, str) else dim_3_index
 
-        return df
+        vl_cols = ['year']
+        index_cols = ['case_id', 'year']
+
+        if column_name is None:
+            column_name = qn
+
+        renames = {0: column_name}
+
+        if dim_1_index:
+            vl_cols.append(dim_1_name)
+            index_cols.append(dim_1_name)
+            renames[dim_1_name] = dim_1_rename
+
+        if dim_2_index:
+            vl_cols.append(dim_2_name)
+            index_cols.append(dim_2_name)
+            renames[dim_2_name] = dim_2_rename
+
+        if dim_3_index:
+            vl_cols.append(dim_3_name)
+            index_cols.append(dim_3_name)
+            renames[dim_3_name] = dim_3_rename
+
+        return _.join(self.var_labels[vl_cols])\
+            .reset_index().rename(columns=renames)\
+            .drop('var_name', axis=1)\
+            .set_index(['case_id','year'])
+
 
     def employment_question_frame(self, qn):
         """Return the dataframe from the question groups for a specific employment question, which
         includes the employer number in the index"""
 
-        return self.question_frame(qn, employer_index=True)
+        return self.question_frame(qn, dim_1_index='employer_no')
+
 
 class NLSY97(NLSY):
     # Variables that only appear in one year.

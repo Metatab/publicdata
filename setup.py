@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import  find_packages, setup
 import sys
 import os
 
@@ -8,13 +8,13 @@ if sys.argv[-1] == 'publish':
 
 setup(
     name='publicdata',
-    version='0.1.1',
+    version='0.1.3',
     url='https://github.com/CivicKnowledge/publicdata',
     license='MIT',
     author='Eric Busboom',
     author_email='eric@busboom.org',
     description='Appurl And Rowgenerators for public datasets',
-    packages=['publicdata'],
+    packages=find_packages(),
     zip_safe=True,
     install_requires=[
         'fs >= 2',

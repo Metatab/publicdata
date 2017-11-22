@@ -47,7 +47,7 @@ def extract(resource, doc, *args, **kwargs):
 
     yield table.headers
 
-    parser = table.make_fw_row_parser()
+    parser = table.make_fw_row_parser(ignore_empty=True)
 
     for r in doc.references():
 

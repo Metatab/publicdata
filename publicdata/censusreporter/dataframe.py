@@ -9,12 +9,10 @@ import pandas as pd
 import numpy as np
 
 
-
 class CensusDataFrame(pd.DataFrame):
+    _metadata = ['title_map', 'release', '_dataframe']  # Release is the Census Reporter release metadata
 
-    _metadata = ['title_map', 'release'] # Release is the Census Reporter release metadata
-
-    def __init__(self, data=None, index=None,  columns=None, dtype=None, copy=False, schema=None):
+    def __init__(self, data=None, index=None, columns=None, dtype=None, copy=False, schema=None):
 
         if columns is None and schema is not None:
             self.title_map = {s['code']: s['code_title'] for s in schema}
@@ -33,18 +31,16 @@ class CensusDataFrame(pd.DataFrame):
 
     @property
     def _constructor_sliced(self):
-        from .series import   CensusSeries
+        from .series import CensusSeries
         return CensusSeries
-
 
     @property
     def titles(self):
         """Return a copy that uses titles for column headings"""
 
         return self.rename(index=str,
-                           columns = self.title_map,
+                           columns=self.title_map,
                            inplace=False)
-
 
     def search_columns(self, *args):
         """Return full titles for columns that contain one of the strings in the arguments
@@ -63,7 +59,6 @@ class CensusDataFrame(pd.DataFrame):
                         yield (k, v)
 
         return pd.DataFrame(data=list(_f()), columns='code title'.split())
-
 
     def _col_name_match(self, c, key):
 
@@ -90,8 +85,6 @@ class CensusDataFrame(pd.DataFrame):
             'position': pos
         }
 
-
-
     @property
     def rows(self):
         """Yield rows like a partition does, with a header first, then rows. """
@@ -100,7 +93,6 @@ class CensusDataFrame(pd.DataFrame):
 
         for t in self.itertuples():
             yield list(t)
-
 
     def sum_m(self, *cols):
         """Sum a set of Dataframe series and return the summed series and margin. The series must have names"""
@@ -116,7 +108,7 @@ class CensusDataFrame(pd.DataFrame):
 
         estimates = sum(cols)
 
-        margins = np.sqrt(sum(c.m90**2 for c in cols))
+        margins = np.sqrt(sum(c.m90 ** 2 for c in cols))
 
         return estimates, margins
 
@@ -131,10 +123,9 @@ class CensusDataFrame(pd.DataFrame):
         :return:
         """
 
-        self[col_name], self[col_name+'_m90'] = self.sum_m(*cols)
+        self[col_name], self[col_name + '_m90'] = self.sum_m(*cols)
 
         return self
-
 
     def add_rse(self, *col_name):
         """
@@ -156,11 +147,11 @@ class CensusDataFrame(pd.DataFrame):
         c1 = self[first]
         c2 = self[last]
 
-        cols = self.ix[:,c1.col_position:c2.col_position+1]
+        cols = self.ix[:, c1.col_position:c2.col_position + 1]
 
         estimates = sum(cols)
 
-        margins = np.sqrt(np.sum(c.m90**2 for c in cols))
+        margins = np.sqrt(np.sum(c.m90 ** 2 for c in cols))
 
         return estimates, margins
 
@@ -174,7 +165,7 @@ class CensusDataFrame(pd.DataFrame):
         :return: a tuple of series, the estimates and the margins
         """
 
-        return self._ratio(n,d,subset = False)
+        return self._ratio(n, d, subset=False)
 
     def proportion(self, n, d):
         """
@@ -247,7 +238,7 @@ class CensusDataFrame(pd.DataFrame):
                 sqr = n_m90 ** 2 - ((rate ** 2) * (d_m90 ** 2))
 
                 # When the sqr value is <= 0, the sqrt will fail, so use the other calc in those cases
-                sqrn = sqr.where(sqr > 0, n_m90 ** 2 + ((rate ** 2) * (d_m90 ** 2)) )
+                sqrn = sqr.where(sqr > 0, n_m90 ** 2 + ((rate ** 2) * (d_m90 ** 2)))
 
                 # Aw, hell, just punt.
                 sqrnz = sqrn.where(sqrn > 0, float('nan'))
@@ -271,10 +262,9 @@ class CensusDataFrame(pd.DataFrame):
 
         p = a * b
 
-        margin = np.sqrt(a**2 *  b_m90**2 + b**2 * a_m90**2)
+        margin = np.sqrt(a ** 2 * b_m90 ** 2 + b ** 2 * a_m90 ** 2)
 
         return p, margin
-
 
     def dim_columns(self, pred):
         """
@@ -304,7 +294,7 @@ class CensusDataFrame(pd.DataFrame):
 
         for i, c in enumerate(self.partition.table.columns):
             if c.name.endswith('_m90'):
-               continue
+                continue
 
             if i < 9:
                 continue
@@ -381,8 +371,6 @@ class CensusDataFrame(pd.DataFrame):
         from .series import CensusSeries
         return CensusSeries
 
-
-
     def _getitem_column(self, key):
         """ Return a column from a name
 
@@ -392,7 +380,7 @@ class CensusDataFrame(pd.DataFrame):
 
         c = super(CensusDataFrame, self)._getitem_column(key)
         c.parent_frame = self
-        c.title = self.title_map.get(key,key)
+        c.title = self.title_map.get(key, key)
 
         return c
 
@@ -409,8 +397,8 @@ class CensusDataFrame(pd.DataFrame):
                 augmented_key.append(col_name)
 
                 try:
-                    self[col_name+'_m90']
-                    augmented_key.append(col_name+'_m90')
+                    self[col_name + '_m90']
+                    augmented_key.append(col_name + '_m90')
                 except KeyError:
                     pass
 
@@ -421,4 +409,3 @@ class CensusDataFrame(pd.DataFrame):
         assert id(df) != id(self)
 
         return df
-

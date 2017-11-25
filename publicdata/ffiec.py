@@ -58,7 +58,7 @@ def extract(resource, doc, *args, **kwargs):
         with open(t.path, 'rU') as f:
 
             for line in (islice(f.readlines(), 10) if test else f.readlines()):
-                if not line.startswith(prefix):
+                if not line.startswith(prefix+' '):
                     continue
 
                 yield parser(line)

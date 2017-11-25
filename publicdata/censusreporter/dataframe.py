@@ -7,18 +7,21 @@
 import six
 import pandas as pd
 import numpy as np
-
+from publicdata.exc import PublicDataException
 
 class CensusDataFrame(pd.DataFrame):
-    _metadata = ['title_map', 'release', '_dataframe']  # Release is the Census Reporter release metadata
+    _metadata = ['title_map', 'release', '_dataframe', '_url']  # Release is the Census Reporter release metadata
 
-    def __init__(self, data=None, index=None, columns=None, dtype=None, copy=False, schema=None):
+    def __init__(self, data=None, index=None, columns=None, dtype=None, copy=False, schema=None,
+                 url=None):
 
         if columns is None and schema is not None:
             self.title_map = {s['code']: s['code_title'] for s in schema}
             columns = self.title_map.keys()
         else:
             self.title_map = {}
+
+        self._url = url
 
         super(CensusDataFrame, self).__init__(data, index, columns, dtype, copy)
 
@@ -93,6 +96,33 @@ class CensusDataFrame(pd.DataFrame):
 
         for t in self.itertuples():
             yield list(t)
+
+    @property
+    def geo(self):
+        """Return a geopandas dataframe with boundaries for the area"""
+        from publicdata.censusreporter.url import CensusReporterURL
+        from rowgenerators import get_generator
+        from itertools import islice
+        from metapack.jupyter.pandas import  MetatabDataFrame
+
+        if isinstance(self._url, CensusReporterURL):
+            geo_url = self._url.geo
+
+            r = geo_url.get_resource()
+            t = r.get_target()
+
+            g = get_generator(t)
+
+            headers = next(islice(g, 0, 1))
+            data = islice(g, 1, None)
+
+            df = MetatabDataFrame(list(data), columns=headers, metatab_resource=self)
+
+            return df.geo
+
+        else:
+            raise PublicDataException("Dataframe doesn't have a CensusReporterURL, so can't find geo source")
+
 
     def sum_m(self, *cols):
         """Sum a set of Dataframe series and return the summed series and margin. The series must have names"""

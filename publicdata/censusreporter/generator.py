@@ -36,6 +36,8 @@ class CensusReporterSource(Source):
     def __init__(self, ref, cache=None, working_dir=None, **kwargs):
         super().__init__(ref, cache, working_dir, **kwargs)
 
+        self._source_url = kwargs.get('source_url')
+
         assert isinstance(ref, CensusReporterJsonUrl)
 
     @property
@@ -57,7 +59,7 @@ class CensusReporterSource(Source):
 
         rows, self._columns, release = self.get_cr_rows()
 
-        df = CensusDataFrame(rows, schema=self._columns)
+        df = CensusDataFrame(rows, schema=self._columns, url=self._source_url)
 
         df.release = release
 

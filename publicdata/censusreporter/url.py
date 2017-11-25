@@ -64,7 +64,7 @@ class CensusReporterURL(WebUrl):
     def geo(self):
         """Return the geo version of this URL"""
 
-        return CensusReporterShapeURL(str(self))
+        return CensusReporterShapeURL(str(self), downloader=self._downloader)
 
     @classmethod
     def _match(cls, url, **kwargs):

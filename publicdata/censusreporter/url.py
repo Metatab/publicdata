@@ -11,7 +11,7 @@ from os.path import dirname, join
 
 import requests
 
-from appurl import WebUrl, AppUrlError, parse_app_url
+from rowgenerators import WebUrl, AppUrlError, parse_app_url
 from publicdata.censusreporter.jsonurl import CensusReporterJsonUrl
 
 

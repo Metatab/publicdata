@@ -35,8 +35,10 @@ def combine(resource, doc, *args, **kwargs):
 
     from itertools import islice
 
+
+
     for i, r in enumerate(doc.references()):
-        if r.get_value('group') == resource.get_value('group'):
+        if r.get_value('group') == resource.get_value('group') or r.get_value('group') == resource.get_value('name'):
 
             try:
                 start = int(r.get_value('startline', 1))

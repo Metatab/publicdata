@@ -13,7 +13,7 @@ setup(
     license='MIT',
     author='Eric Busboom',
     author_email='eric@busboom.org',
-    description='Appurl And Rowgenerators for public datasets',
+    description='Metatab support code for working with public datasets',
     packages=find_packages(),
     zip_safe=True,
     install_requires=[

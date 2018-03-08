@@ -85,7 +85,6 @@ class TestGenerators(unittest.TestCase):
         for row in islice(list(tm),3):
             print(row)
 
-
     def test_geo(self):
 
         tm = GeoFile(2016, 5, 'RI', 140, 1)

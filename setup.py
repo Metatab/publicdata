@@ -25,14 +25,13 @@ setup(
         ],
     entry_points={
         'appurl.urls': [
-            "censusreporter: = publicdata.censusreporter:CensusReporterURL",
-            "censusreportergeo: = publicdata.censusreporter:CensusReporterShapeURL"
+            "censusreporter: = publicdata.census.censusreporter:CensusReporterURL",
+            "censusreportergeo: = publicdata.census.censusreporter:CensusReporterShapeURL",
+            "census: = publicdata.census.files.appurl:CensusFile"
         ],
         'rowgenerators': [
-            "CRJSON+ = publicdata.censusreporter:CensusReporterSource"
-
+            "CRJSON+ = publicdata.censusreporter:CensusReporterSource",
+            "census: = publicdata.census.files.generators:CensusSource"
         ]
-
     },
-
 )

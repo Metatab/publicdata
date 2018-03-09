@@ -10,12 +10,13 @@ import json
 from os.path import dirname, join
 
 import requests
+from publicdata.census.appurl import CensusUrl
 
 from rowgenerators import WebUrl, AppUrlError, parse_app_url
-from publicdata.censusreporter.jsonurl import CensusReporterJsonUrl
+from publicdata.census.censusreporter.jsonurl import CensusReporterJsonUrl
 
 
-class CensusReporterURL(WebUrl):
+class CensusReporterURL(CensusUrl):
     """A URL for censusreporter tables.
 
     General form:
@@ -34,31 +35,6 @@ class CensusReporterURL(WebUrl):
         super().__init__(url, downloader, **kwargs)
 
         self._parts # Will raise on format errors
-
-    @property
-    def _parts(self):
-        if not self.netloc:
-            # If the URL didn't have ://, there is no netloc
-            parts =  self.path.strip('/').split('/')
-        else:
-            parts = tuple( [self.netloc] + self.path.strip('/').split('/'))
-
-        if len(parts) != 3:
-            raise AppUrlError("Census reporters must have three path components. Got: '{}' ".format(parts))
-
-        return parts
-
-    @property
-    def table_id(self):
-        return self._parts[0]
-
-    @property
-    def summary_level(self):
-       return self._parts[1]
-
-    @property
-    def geoid(self):
-        return self._parts[2]
 
     @property
     def geo(self):
@@ -104,14 +80,7 @@ class CensusReporterURL(WebUrl):
         # get_resource returns a CensusReporterJsonUrl so this should never be called
         raise NotImplementedError()
 
-    def join(self, s):
-        raise NotImplementedError()
 
-    def join_dir(self, s):
-        raise NotImplementedError()
-
-    def join_target(self, tf):
-        raise NotImplementedError()
 
 class CensusReporterShapeURL(CensusReporterURL):
     """A URL for censusreporter tables.

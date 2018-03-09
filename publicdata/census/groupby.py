@@ -1,8 +1,8 @@
 import numpy as np
 from pandas.core.groupby import SeriesGroupBy, DataFrameGroupBy
 
-from .dataframe import CensusDataFrame
-from .series import CensusSeries
+from publicdata.census.dataframe import CensusDataFrame
+from publicdata.census.series import CensusSeries
 
 
 def groupby(obj, by, **kwds):

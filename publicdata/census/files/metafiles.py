@@ -8,6 +8,7 @@ from rowgenerators import parse_app_url
 
 
 class Table(object):
+
     csv_header = 'id seq start title universe subject'.split()
 
     def __init__(self, table_id, title, universe=None, seq=None, fileid=None, startpos=None, subject=None):

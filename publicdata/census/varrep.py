@@ -12,7 +12,9 @@ import gzip
 
 import pandas as pd
 import requests
-from .util import get_cache, slugify
+from publicdata.census.censusreporter.util import get_cache
+from publicdata.census.util import slugify
+
 
 def get_ave_weight(state):
     """Return the average weight parameter for a state"""

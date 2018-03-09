@@ -4,11 +4,8 @@
 
 """
 
-from pandas import DataFrame, Series
+from pandas import Series
 import numpy as np
-from six import string_types
-import numpy as np
-from six import string_types
 
 
 class CensusSeries(Series):
@@ -21,7 +18,7 @@ class CensusSeries(Series):
 
     @property
     def _constructor_expanddim(self):
-        from .dataframe import CensusDataFrame
+        from publicdata.census.dataframe import CensusDataFrame
         return CensusDataFrame
 
     @property

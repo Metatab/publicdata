@@ -11,6 +11,8 @@ from publicdata.census.files.metafiles import TableLookup
 from rowgenerators import parse_app_url
 from functools import lru_cache
 from operator import itemgetter
+from rowgenerators import Source
+from publicdata.census.files.appurl import CensusUrl
 
 class _CensusFile(object):
 
@@ -134,6 +136,18 @@ class Table(_CensusFile):
         geo = self.geo
         lr_pos = None
 
+        def try_number(v):
+            try:
+                return int(v)
+            except:
+                pass
+
+            try:
+                return float(v)
+            except:
+                pass
+
+            return v
 
 
         for i, row in enumerate(self.sequence_file):
@@ -151,5 +165,30 @@ class Table(_CensusFile):
 
             summary_level = geo_cols[self.sl_col_pos]
 
-            if i == 0 or int(summary_level) == int(self.summary_level):
-               yield geo_cols+ig(row)
+            if i == 0:
+                yield geo_cols + ig(row) # Headers, these are supposed to be strings
+            else:
+                if int(summary_level) == int(self.summary_level):
+                    yield geo_cols + tuple(try_number(e) for e in ig(row))
+
+
+class CensusSource(Source):
+    """ """
+
+    def __init__(self, ref, cache=None, working_dir=None, **kwargs):
+
+        super().__init__(ref, cache, working_dir, **kwargs)
+
+        assert isinstance(ref, CensusUrl)
+
+    def __iter__(self):
+
+        from geoid.acs import AcsGeoid
+
+        gid = AcsGeoid.parse(self.ref.geoid)
+
+
+        tm = Table(self.ref.year, self.ref.release, gid.stusab,
+                   str(self.ref.summary_level), self.ref.tableid)
+
+        yield from tm

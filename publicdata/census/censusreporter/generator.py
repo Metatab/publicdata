@@ -11,7 +11,7 @@ from itertools import repeat
 from operator import itemgetter
 from urllib.parse import unquote
 
-from publicdata.censusreporter.jsonurl import CensusReporterJsonUrl
+from publicdata.census.censusreporter.jsonurl import CensusReporterJsonUrl
 from rowgenerators import Source
 
 
@@ -55,7 +55,7 @@ class CensusReporterSource(Source):
         :param limit: Limit is ignored
         :return:
         """
-        from .dataframe import CensusDataFrame
+        from publicdata.census.dataframe import CensusDataFrame
 
         rows, self._columns, release = self.get_cr_rows()
 

@@ -39,12 +39,13 @@ class Table(object):
 class Column(object):
     csv_header = 'tableid id colno desc short_desc'.split()
 
-    def __init__(self, table_id, col_id, col_no, description=None, short_desc=None):
+    def __init__(self, table_id, col_id, col_no, description=None, short_desc=None, seq_file_col_no=None):
         self.table_id = table_id
         self.unique_id = col_id
         self.description = description
         self.sort_description = short_desc
         self.col_no = col_no
+        self.seq_file_col_no = seq_file_col_no
 
     @property
     def row(self):
@@ -52,6 +53,7 @@ class Column(object):
             self.table_id,
             self.unique_id,
             self.col_no,
+            self.seq_file_col_no,
             self.description,
             self.sort_description
         ]
@@ -93,7 +95,9 @@ class TableShell(object):
                 line_no = int(row['Line'])
 
                 if not line_no in tables[table_id_key].columns:
-                    tables[table_id_key].columns[line_no] = Column(row[0], row['UniqueID'], line_no, short_desc=row['Stub'])
+                    tables[table_id_key].columns[line_no] = Column(row[0], row['UniqueID'], line_no,
+                                                                   short_desc=row['Stub'],
+                                                                   seq_file_col_no=line_no+tables[table_id_key].startpos)
                 else:
                     tables[table_id_key].columns[line_no].short_desc = row['Stub']
 

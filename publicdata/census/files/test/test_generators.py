@@ -84,12 +84,6 @@ class TestGenerators(unittest.TestCase):
                     c = t.columns[cn]
                     w.writerow(c.row )
 
-    def test_sequence(self):
-
-        tm = SequenceFile(2016, 5, 'RI', 140, 2)
-
-        for row in islice(list(tm),3):
-            print(row)
 
 
     def test_geo(self):
@@ -139,26 +133,43 @@ class TestGenerators(unittest.TestCase):
 
         self.assertEqual(245,len(rows))
 
+    def test_sequence(self):
+
+        sf = SequenceFile(2016,5,'RI',140, 3 )
+
+        h, f, m = list(zip(sf.file_headers, sf.descriptions, sf.meta))[60]
+
+        self.assertEqual('B01001G_028', h)
+        self.assertEqual('SEX BY AGE (TWO OR MORE RACES) for People Who Are Two Or More Races% Female:% 55 to 64 years',
+                         f)
+
+        for h,f,m in  list(zip(sf.file_headers, sf.descriptions, sf.meta)):
+            self.assertEqual(h, m.unique_id)
+
+
     def test_dataframe(self):
 
         from rowgenerators import parse_app_url
 
-        u = parse_app_url('census://2016/5/RI/140/B01003')
+        u = parse_app_url('census://2016/5/RI/140/B01002')
 
         g = u.generator
 
-
         for (a,b) in zip(g.file_headers, g.descriptions):
-            print(a,b.title())
+            print(a,b)
 
-        rows = list(u.generator)
+        rows = list(g)
 
         self.assertEqual(245,len(rows))
 
         print(rows[0])
+        print(rows[1])
+
+        for c in u.generator.meta:
+            print(c)
 
 
-
+        print(u.generator.dataframe())
 
 if __name__ == '__main__':
     unittest.main()

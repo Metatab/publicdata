@@ -139,5 +139,26 @@ class TestGenerators(unittest.TestCase):
 
         self.assertEqual(245,len(rows))
 
+    def test_dataframe(self):
+
+        from rowgenerators import parse_app_url
+
+        u = parse_app_url('census://2016/5/RI/140/B01003')
+
+        g = u.generator
+
+
+        for (a,b) in zip(g.file_headers, g.descriptions):
+            print(a,b.title())
+
+        rows = list(u.generator)
+
+        self.assertEqual(245,len(rows))
+
+        print(rows[0])
+
+
+
+
 if __name__ == '__main__':
     unittest.main()

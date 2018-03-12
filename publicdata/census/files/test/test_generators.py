@@ -107,21 +107,21 @@ class TestGenerators(unittest.TestCase):
 
         rows = list(islice(tm,5))
 
-        self.assertEqual(('LOGRECNO', 'NAME', 'B01001_002', 'B01001_004_m90',
-                          'B01001_007', 'B01001_009_m90', 'B01001_012',
-                          'B01001_014_m90', 'B01001_017', 'B01001_019_m90',
-                          'B01001_022', 'B01001_024_m90', 'B01001_027',
-                          'B01001_029_m90', 'B01001_032', 'B01001_034_m90',
-                          'B01001_037', 'B01001_039_m90', 'B01001_042',
-                          'B01001_044_m90', 'B01001_047', 'B01001_049_m90'),
+        self.assertEqual(('GEOID', 'B01001_001_m90', 'B01001_004', 'B01001_006_m90', 'B01001_009',
+                          'B01001_011_m90', 'B01001_014', 'B01001_016_m90', 'B01001_019', 'B01001_021_m90',
+                          'B01001_024', 'B01001_026_m90', 'B01001_029', 'B01001_031_m90', 'B01001_034',
+                          'B01001_036_m90', 'B01001_039', 'B01001_041_m90', 'B01001_044', 'B01001_046_m90',
+                          'B01001_049'),
                           rows[0][::5])
 
-        self.assertEqual(('0002699', '14000US06001400100', '140', 'CA',
-                           '001', 'Census Tract 4001, Alameda County, California'),
+
+        self.assertEqual(('14000US06001400100', 'CA', '001', 'Census Tract 4001, Alameda County, California',
+                          3018, 195),
                           rows[1][:6])
 
-        self.assertEqual(11272, sum(rows[1][7:]))
-        self.assertEqual(15397, sum(rows[4][7:]))
+        # Checksum a few rows
+        self.assertEqual(6561, sum(rows[1][7:]))
+        self.assertEqual(9061, sum(rows[4][7:]))
 
     def test_appurl(self):
 
@@ -146,30 +146,35 @@ class TestGenerators(unittest.TestCase):
         for h,f,m in  list(zip(sf.file_headers, sf.descriptions, sf.meta)):
             self.assertEqual(h, m.unique_id)
 
-
     def test_dataframe(self):
-
+        from publicdata.census.files.appurl import CensusFile
         from rowgenerators import parse_app_url
 
         u = parse_app_url('census://2016/5/RI/140/B01002')
 
-        g = u.generator
+        print(type(u))
 
-        for (a,b) in zip(g.file_headers, g.descriptions):
-            print(a,b)
+        g = u.generator
 
         rows = list(g)
 
         self.assertEqual(245,len(rows))
 
-        print(rows[0])
-        print(rows[1])
+        df = u.generator.dataframe()
 
-        for c in u.generator.meta:
-            print(c)
+        self.assertEqual(9708, int(df['B01002_001'].sum()))
+        self.assertEqual(809, int(df['B01002_001_m90'].sum()))
+        self.assertEqual(9375, int(df['B01002_002'].sum()))
+        self.assertEqual(1171, int(df['B01002_002_m90'].sum()))
 
+    def test_geo_dataframe(self):
 
-        print(u.generator.dataframe())
+        u = parse_app_url('census://2016/5/RI/140/B01002')
+
+        gdf = u.generator.geoframe
+
+        print(gdf.head())
+        print(gdf.geometry.head())
 
 if __name__ == '__main__':
     unittest.main()

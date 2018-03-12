@@ -4,8 +4,9 @@
 """ App Urls and generators for  accessing  static files from census.gov"""
 
 from publicdata.census.appurl import CensusUrl
+from publicdata.census.files.url_templates import tiger_url
 from publicdata.census.util import sub_geoids, sub_summarylevel
-from rowgenerators import AppUrlError
+from rowgenerators import AppUrlError, parse_app_url
 
 class CensusFile(CensusUrl):
 
@@ -66,6 +67,16 @@ class CensusFile(CensusUrl):
     def tableid(self):
         return sub_geoids(self._parts[4])
 
+
+    @property
+    def geo_url(self):
+        """Return a url for the geofile for this Census file"""
+        from geoid.acs import AcsGeoid
+
+        us = tiger_url(self.year, self.summary_level, AcsGeoid.parse(self.geoid).stusab)
+
+        return parse_app_url(us)
+
     def join(self, s):
         raise NotImplementedError()
 
@@ -74,3 +85,4 @@ class CensusFile(CensusUrl):
 
     def join_target(self, tf):
         raise NotImplementedError()
+

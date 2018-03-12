@@ -15,6 +15,32 @@ from rowgenerators import Source
 from publicdata.census.files.appurl import CensusUrl
 from copy import copy
 from rowgenerators import SourceError
+from itertools import chain
+
+
+# https://gist.github.com/smdabdoub/5213405
+@lru_cache(maxsize=100, typed=False)
+def tablemeta(year, release):
+    return TableLookup(year, release)
+
+
+def try_number(v):
+    try:
+        return int(v)
+    except:
+        pass
+
+    try:
+        return float(v)
+    except:
+        pass
+
+    return v
+
+
+def ileave(*iters):
+    return list(chain(*zip(*iters)))
+
 
 class _CensusFile(object):
 
@@ -27,7 +53,8 @@ class _CensusFile(object):
 
 
 class GeoFile(_CensusFile):
-
+    """This GeoFile holds information about the geographic summary level,
+    not the shape of the boundary of the region. """
     def __init__(self, year, release, stusab, summary_level, seq=None):
         super().__init__(year, release, stusab, summary_level, seq)
 
@@ -39,17 +66,11 @@ class GeoFile(_CensusFile):
 
         yield headers[0]
 
-        t =  parse_app_url(self.geo_url).get_resource().get_target()
+        t = parse_app_url(self.geo_url).get_resource().get_target()
         t.encoding = 'latin1'
 
         yield from t.generator
 
-
-# https://gist.github.com/smdabdoub/5213405
-from itertools import chain
-
-def ileave(*iters):
-    return list(chain(*zip(*iters)))
 
 class SequenceFile(_CensusFile):
 
@@ -76,29 +97,29 @@ class SequenceFile(_CensusFile):
     def descriptions(self):
 
         est_headers = self._descriptions[6:]
-        margin_headers = [ '' for e in est_headers]
+        margin_headers = ['' for e in est_headers]
 
         return self._descriptions[:6] + ileave(est_headers, margin_headers)
 
     @property
     def meta(self):
-        from .metafiles import  Column
+        from .metafiles import Column
 
         columns = []
 
-        for i,c in enumerate(self._file_headers[:6]):
-            c = Column(None, c, i, description = c, short_desc = c, seq_file_col_no = i)
+        for i, c in enumerate(self._file_headers[:6]):
+            c = Column(None, c, i, description=c, short_desc=c, seq_file_col_no=i)
             columns.append(c)
 
-        for k,v in self.table_meta.tables.items():
+        for k, v in self.table_meta.tables.items():
             if int(v.seq) == self.seq:
                 for k in sorted(v.columns):
                     c = copy(v.columns[k])
-                    c.seq_file_col_no = columns[-1].seq_file_col_no+1
+                    c.seq_file_col_no = columns[-1].seq_file_col_no + 1
                     columns.append(c)
 
                     c = copy(v.columns[k])
-                    c.unique_id = c.unique_id+'_m90'
+                    c.unique_id = c.unique_id + '_m90'
                     c.seq_file_col_no = columns[-1].seq_file_col_no + 1
                     columns.append(c)
 
@@ -111,30 +132,12 @@ class SequenceFile(_CensusFile):
         for e, m in zip(parse_app_url(self.est_url).generator, parse_app_url(self.margin_url).generator):
             yield e[:6] + list(ileave(e[6:], m[6:]))
 
-@lru_cache(maxsize=100, typed=False)
-def tablemeta(year, release):
-    return TableLookup(year, release)
-
-
-def try_number(v):
-    try:
-        return int(v)
-    except:
-        pass
-
-    try:
-        return float(v)
-    except:
-        pass
-
-    return v
 
 class Table(_CensusFile):
     """Iterator for a single table in a single segment file"""
     geo_headers = tuple('LOGRECNO GEOID SUMLEVEL STUSAB COUNTY NAME COMPONENT'.split())
 
     sl_col_pos = geo_headers.index('SUMLEVEL')
-
 
     def __init__(self, year, release, stusab, summary_level, tableid):
         super().__init__(year, release, stusab, summary_level, seq=None)
@@ -147,17 +150,17 @@ class Table(_CensusFile):
             self.table = self.meta.tables[tableid]
         except KeyError as e:
 
-            alt_c = 'c'+tableid[1:]
+            alt_c = 'c' + tableid[1:]
             alt_b = 'b' + tableid[1:]
 
-            if (tableid.startswith('b') and  alt_c in self.meta.tables):
+            if (tableid.startswith('b') and alt_c in self.meta.tables):
                 other_msg = f" However, table '{alt_c}' exists"
             elif (tableid.startswith('c') and alt_b in self.meta.tables):
                 other_msg = f" However, table '{alt_b}' exists"
             else:
                 other_msg = ''
 
-            raise SourceError(f"Table metadata does not include table '{tableid}' "+other_msg)
+            raise SourceError(f"Table metadata does not include table '{tableid}' " + other_msg)
 
         seq = int(self.table.seq)
         self.geo_file = GeoFile(year, release, stusab, summary_level, seq)
@@ -177,15 +180,14 @@ class Table(_CensusFile):
         self.col_positions = [c.seq_file_col_no for c in self._columns]
         self.ig = itemgetter(*self.col_positions)
 
-
     @property
     def file_headers(self):
         # self.geo['LOGRECNO'] returns the geo header row
-        return self.geo['LOGRECNO'][0]+self.ig(self.sequence_file.file_headers)
+        return self.geo['LOGRECNO'][0] + self.ig(self.sequence_file.file_headers)
 
     @property
     def descriptions(self):
-        return self.geo['LOGRECNO'][0]+self.ig(self.sequence_file.descriptions)
+        return self.geo['LOGRECNO'][0] + self.ig(self.sequence_file.descriptions)
 
     @property
     def geo(self):
@@ -219,7 +221,7 @@ class Table(_CensusFile):
         """Yield Column objects for this table"""
         from .metafiles import Column
 
-        cols = [None]*len(self.geo['LOGRECNO'][0]) + self._columns
+        cols = [None] * len(self.geo['LOGRECNO'][0]) + self._columns
 
         for i, (f, d, c) in enumerate(zip(self.file_headers, self.descriptions, cols)):
 
@@ -241,7 +243,7 @@ class Table(_CensusFile):
             geo_cols, summary_level = geo[row[self.lr_pos]]
 
             if i == 0:
-                yield geo_cols  + self.ig(row) # Headers, these are supposed to be strings
+                yield geo_cols + self.ig(row)  # Headers, these are supposed to be strings
             else:
                 if int(summary_level) == int(self.summary_level):
                     yield geo_cols + tuple(try_number(e) for e in self.ig(row))
@@ -259,7 +261,7 @@ class CensusSource(Source):
         gid = AcsGeoid.parse(self.ref.geoid)
 
         self.table = Table(self.ref.year, self.ref.release, gid.stusab,
-                   str(self.ref.summary_level), self.ref.tableid)
+                           str(self.ref.summary_level), self.ref.tableid)
 
         self._meta = TableMeta(self.ref.year, self.ref.release)
 
@@ -284,20 +286,20 @@ class CensusSource(Source):
         for c in self.columns:
 
             try:
-                parts = c.unique_id.replace('_m90','').split('_')
+                parts = c.unique_id.replace('_m90', '').split('_')
                 index = int(parts[1])
             except IndexError:
                 index = None
 
-            yield  {
-            'name': c.unique_id,
-            'title': c.description,
-            'code': c.unique_id,
-            'code_title': c.unique_id,
-            'indent': None,
-            'index': index,
-            'position': c.col_no
-        }
+            yield {
+                'name': c.unique_id,
+                'title': c.description,
+                'code': c.unique_id,
+                'code_title': c.unique_id + ' ' + c.description if c.unique_id != c.description else c.unique_id,
+                'indent': None,
+                'index': index,
+                'position': c.col_no
+            }
 
     def dataframe(self, limit=None):
         """
@@ -307,14 +309,66 @@ class CensusSource(Source):
         """
 
         from publicdata.census.dataframe import CensusDataFrame
+        from itertools import islice
+        import numpy as np
 
-        df = CensusDataFrame(list(self)[1:], schema=self.meta, url=None)
+        rows = list(islice(self, 1, None))
+
+        df = CensusDataFrame(rows, schema=self.meta, url=None)
 
         df.release = self.ref.release
 
-        return df
+        return df.replace('.', np.nan).set_index('GEOID')
+
+    @property
+    def geo_url(self):
+        return self.ref.geo_url
+
+    @property
+    def geo(self):
+        """Return a generator for the geographic file"""
+        return self.geo_url.get_resource().get_target().generator
+
+    @property
+    def geoframe(self):
+
+        import geopandas as gpd
+        from shapely.geometry.polygon import BaseGeometry
+        from shapely.wkt import loads
+
+        rows = list(self.geo)
+
+        gdf = gpd.GeoDataFrame(rows[1:], columns=rows[0])
+
+        first = next(gdf.iterrows())[1].geometry
+
+        if isinstance(first, str):
+            shapes = [ loads(row['geometry']) for i, row in gdf.iterrows()]
+
+        elif not isinstance(first, BaseGeometry):
+            # If we are reading a metatab package, the geometry column's type should be
+            # 'geometry' which will give the geometry values class type of
+            # rowpipe.valuetype.geo.ShapeValue. However, there are other
+            # types of objects that have a 'shape' property.
+
+            shapes = [row['geometry'].shape for i, row in gdf.iterrows()]
+
+        else:
+            shapes = gdf['geometry']
+
+        gdf['geometry'] = gpd.GeoSeries(shapes)
+
+        return gdf.set_geometry('geometry').set_index('GEOID')
 
     def __iter__(self):
 
         for row in self.table:
-            yield row # (row[1],row[4], row[]) + row[8:]
+            yield row  # (row[1],row[4], row[]) + row[8:]
+
+class CensusGeoSource(Source):
+
+    def __init__(self, ref, cache=None, working_dir=None, **kwargs):
+        super().__init__(ref, cache, working_dir, **kwargs)
+
+    def dataframe(self):
+        pass

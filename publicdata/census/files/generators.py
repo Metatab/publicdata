@@ -17,6 +17,7 @@ from copy import copy
 from rowgenerators import SourceError
 from itertools import chain
 
+from . import logger
 
 # https://gist.github.com/smdabdoub/5213405
 @lru_cache(maxsize=100, typed=False)
@@ -75,6 +76,9 @@ class GeoFile(_CensusFile):
 class SequenceFile(_CensusFile):
 
     def __init__(self, year, release, stusab, summary_level, seq):
+
+        assert seq is not None
+
         super().__init__(year, release, stusab, summary_level, seq)
 
         self.est_url = seq_estimate_url(self.year, self.release, self.stusab, self.summary_level, self.seq)
@@ -140,61 +144,65 @@ class Table(_CensusFile):
     sl_col_pos = geo_headers.index('SUMLEVEL')
 
     def __init__(self, year, release, stusab, summary_level, tableid):
+        from geoid.censusnames import stusab as state_name_map
+
         super().__init__(year, release, stusab, summary_level, seq=None)
 
         self.meta = tablemeta(year, release)
 
-        tableid = tableid.strip().lower()
+        self.tableid = tableid.strip().lower()
 
         try:
-            self.table = self.meta.tables[tableid]
+            self.table = self.meta.tables[self.tableid]
         except KeyError as e:
 
-            alt_c = 'c' + tableid[1:]
-            alt_b = 'b' + tableid[1:]
+            alt_c = 'c' + self.tableid[1:]
+            alt_b = 'b' + self.tableid[1:]
 
-            if (tableid.startswith('b') and alt_c in self.meta.tables):
+            if (self.tableid.startswith('b') and alt_c in self.meta.tables):
                 other_msg = f" However, table '{alt_c}' exists"
-            elif (tableid.startswith('c') and alt_b in self.meta.tables):
+            elif (self.tableid.startswith('c') and alt_b in self.meta.tables):
                 other_msg = f" However, table '{alt_b}' exists"
             else:
                 other_msg = ''
 
-            raise SourceError(f"Table metadata does not include table '{tableid}' " + other_msg)
+            raise SourceError(f"Table metadata does not include table '{self.tableid}' " + other_msg)
 
-        seq = int(self.table.seq)
-        self.geo_file = GeoFile(year, release, stusab, summary_level, seq)
-        self.sequence_file = SequenceFile(year, release, stusab, summary_level, seq)
+        self.seq = int(self.table.seq)
+
+        self.state_abs = list(state_name_map.values()) if self.stusab.upper() == 'US' else [self.stusab]
+
+        # First sequence file
+        sequence_file = SequenceFile(self.year, self.release, self.state_abs[0],
+                                          self.summary_level, self.seq)
 
         # Get the column names that we will be extracting from the segment
 
         self._columns = []
 
-        for c in self.sequence_file.meta:
+        for c in sequence_file.meta:
             if c.table_id and c.table_id.lower() == tableid.lower():
                 self._columns.append(c)
 
-        self.chariter_pos = self.sequence_file.file_headers.index('CHARITER')
-        self.lr_pos = self.sequence_file.file_headers.index('LOGRECNO')
+        self.lr_pos = sequence_file.file_headers.index('LOGRECNO')
 
         self.col_positions = [c.seq_file_col_no for c in self._columns]
         self.ig = itemgetter(*self.col_positions)
 
-    @property
-    def file_headers(self):
-        # self.geo['LOGRECNO'] returns the geo header row
-        return self.geo['LOGRECNO'][0] + self.ig(self.sequence_file.file_headers)
+        geo = self.geo()
 
-    @property
-    def descriptions(self):
-        return self.geo['LOGRECNO'][0] + self.ig(self.sequence_file.descriptions)
+        self.file_headers = geo['LOGRECNO'][0] + self.ig(sequence_file.file_headers)
+        self.descriptions = geo['LOGRECNO'][0] + self.ig(sequence_file.descriptions)
 
-    @property
-    def geo(self):
+    def geo(self, stusab=None):
         """Return a map of logrecno line numbers to geo headers values from the"""
         geo = {}
 
         sl_pos = lr_pos = None
+
+
+        self.geo_file = GeoFile(self.year, self.release, stusab or self.state_abs[0] ,
+                                self.summary_level, self.seq)
 
         for i, row in enumerate(self.geo_file):
             if i == 0:
@@ -236,17 +244,24 @@ class Table(_CensusFile):
 
     def __iter__(self):
 
-        geo = self.geo
+        for stusab in self.state_abs:
 
-        for i, row in enumerate(self.sequence_file):
+            logger.debug(f"Iterate {self.tableid} for state {stusab}")
 
-            geo_cols, summary_level = geo[row[self.lr_pos]]
+            sequence_file = SequenceFile(self.year, self.release, stusab,
+                                         self.summary_level, self.seq)
 
-            if i == 0:
-                yield geo_cols + self.ig(row)  # Headers, these are supposed to be strings
-            else:
-                if int(summary_level) == int(self.summary_level):
-                    yield geo_cols + tuple(try_number(e) for e in self.ig(row))
+            geo = self.geo(stusab)
+
+            for i, row in enumerate(sequence_file):
+
+                geo_cols, summary_level = geo[row[self.lr_pos]]
+
+                if i == 0:
+                    yield geo_cols + self.ig(row)  # Headers, these are supposed to be strings
+                else:
+                    if int(summary_level) == int(self.summary_level):
+                        yield geo_cols + tuple(try_number(e) for e in self.ig(row))
 
 
 class CensusSource(Source):
@@ -338,7 +353,7 @@ class CensusSource(Source):
 
         rows = list(self.geo)
 
-        gdf = gpd.GeoDataFrame(rows[1:], columns=rows[0])
+        gdf = gpd.GeoDataFrame(rows[1:], columns=[e.lower() for e in rows[0]])
 
         first = next(gdf.iterrows())[1].geometry
 
@@ -358,7 +373,7 @@ class CensusSource(Source):
 
         gdf['geometry'] = gpd.GeoSeries(shapes)
 
-        return gdf.set_geometry('geometry').set_index('GEOID')
+        return gdf.set_geometry('geometry').set_index('geoid')
 
     def __iter__(self):
 

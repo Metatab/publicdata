@@ -149,7 +149,7 @@ class CensusReporterShapeURL(CensusReporterURL):
         from os import symlink, remove
         from os.path import exists
 
-        from rowgenerators.appurl.shapefile import ShapefileUrl
+        from rowgenerators.appurl.file import ShapefileUrl
 
         r = ShapefileUrl(self.resource_url.get_resource())
 

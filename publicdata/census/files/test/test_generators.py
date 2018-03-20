@@ -7,6 +7,7 @@ from publicdata.census.files.generators import SequenceFile, GeoFile, Table as T
 from rowgenerators import parse_app_url
 from itertools import islice
 import csv
+import logging
 
 
 class TestGenerators(unittest.TestCase):
@@ -133,6 +134,21 @@ class TestGenerators(unittest.TestCase):
 
         self.assertEqual(245,len(rows))
 
+    def test_appurl_US(self):
+        from rowgenerators import parse_app_url
+        from rowgenerators.appurl.web.download import logger as download_logger
+        from publicdata.census.files import logger
+
+        logging.basicConfig()
+
+        logger.setLevel(logging.DEBUG)
+
+        u = parse_app_url('census://2016/5/US/50/B17001')
+
+        rows = list(u.generator)
+
+        self.assertEqual(3272,len(rows))
+
     def test_sequence(self):
 
         sf = SequenceFile(2016,5,'RI',140, 3 )
@@ -143,7 +159,7 @@ class TestGenerators(unittest.TestCase):
         self.assertEqual('SEX BY AGE (TWO OR MORE RACES) for People Who Are Two Or More Races% Female:% 55 to 64 years',
                          f)
 
-        for h,f,m in  list(zip(sf.file_headers, sf.descriptions, sf.meta)):
+        for h,f,m in list(zip(sf.file_headers, sf.descriptions, sf.meta)):
             self.assertEqual(h, m.unique_id)
 
     def test_dataframe(self):

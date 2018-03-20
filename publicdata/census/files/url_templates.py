@@ -101,6 +101,8 @@ def seq_archive_url(year, release, stusab, summary_level, seq):
 def seq_estimate_url(year, release, stusab, summary_level, seq):
     """Return the URL to an estimate file, possibly within an archive file"""
 
+    assert seq is not None
+
     sau = seq_archive_url(year, release, stusab, summary_level, seq)
 
     return sau + '#' + 'e{year}{release}{stusab}{seq4}000.txt&target_format=csv'.format(

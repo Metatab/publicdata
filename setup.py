@@ -30,7 +30,7 @@ setup(
             "census: = publicdata.census.files.appurl:CensusFile"
         ],
         'rowgenerators': [
-            "CRJSON+ = publicdata.censusreporter:CensusReporterSource",
+            "CRJSON+ = publicdata.census.censusreporter:CensusReporterSource",
             "census: = publicdata.census.files.generators:CensusSource"
         ]
     },

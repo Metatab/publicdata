@@ -10,10 +10,10 @@ import numpy as np
 from publicdata.exc import PublicDataException
 
 class CensusDataFrame(pd.DataFrame):
-    _metadata = ['title_map', 'release', '_dataframe', '_url']  # Release is the Census Reporter release metadata
+    _metadata = ['title_map', 'release', '_dataframe', '_url', 'table']  # Release is the Census Reporter release metadata
 
     def __init__(self, data=None, index=None, columns=None, dtype=None, copy=False, schema=None,
-                 url=None):
+                 table=None, url=None):
 
         if columns is None and schema is not None:
             self.title_map = {s['code']: s['code_title'] for s in schema}
@@ -22,6 +22,8 @@ class CensusDataFrame(pd.DataFrame):
             self.title_map = {}
 
         self._url = url
+
+        self.table = table
 
         super(CensusDataFrame, self).__init__(data, index, columns, dtype, copy)
 

@@ -67,7 +67,6 @@ class CensusFile(CensusUrl):
     def tableid(self):
         return sub_geoids(self._parts[4])
 
-
     @property
     def geo_url(self):
         """Return a url for the geofile for this Census file"""
@@ -76,6 +75,22 @@ class CensusFile(CensusUrl):
         us = tiger_url(self.year, self.summary_level, AcsGeoid.parse(self.geoid).stusab)
 
         return parse_app_url(us)
+
+    @property
+    def table(self):
+        """Return the census table object"""
+        return self.generator.table
+
+    @property
+    def meta(self):
+        """Return a dict of column metadata"""
+        return list(self.generator.meta)
+
+    @property
+    def dataframe(self):
+        """Return a Pandas dataframe with the data for this table"""
+        return self.generator.dataframe
+
 
     def join(self, s):
         raise NotImplementedError()

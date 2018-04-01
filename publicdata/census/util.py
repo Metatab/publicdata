@@ -1,4 +1,38 @@
+# Copyright (c) 2017 Civic Knowledge. This file is licensed under the terms of the
+# MIT License, included in this distribution as LICENSE
 
+"""
+
+"""
+
+def sub_geoids(v):
+    """Replace state abbreviations with state and national geoids"""
+
+    from geoid.censusnames import stusab
+    from geoid.acs import Us, State
+
+    if len(v) != 2:
+        return v
+
+    v = v.upper()
+
+    stmap = { v:k for k,v in stusab.items() }
+
+    if v == 'US':
+        return str(Us())
+
+
+    if v not in stmap:
+        return v
+
+    return str(State(stmap[v]))
+
+def sub_summarylevel(v):
+    """Replace summary level names with SL numbers"""
+
+    from geoid.core import names
+
+    return names.get(v.lower(), v)
 
 
 def melt(df):
@@ -21,7 +55,7 @@ def melt(df):
 
     return final
 
-# From http://stackoverflow.com/a/295466
+
 def slugify(value):
     """
     Normalizes string, converts to lowercase, removes non-alpha characters,
@@ -38,6 +72,7 @@ def slugify(value):
 
 
 CACHE_NAME = 'pandasreporter'
+
 
 def nl2br(v, is_xhtml= True ):
     if is_xhtml:

@@ -101,6 +101,8 @@ def seq_archive_url(year, release, stusab, summary_level, seq):
 def seq_estimate_url(year, release, stusab, summary_level, seq):
     """Return the URL to an estimate file, possibly within an archive file"""
 
+    assert seq is not None
+
     sau = seq_archive_url(year, release, stusab, summary_level, seq)
 
     return sau + '#' + 'e{year}{release}{stusab}{seq4}000.txt&target_format=csv'.format(
@@ -198,4 +200,39 @@ def table_shell_url(year, release, stusab, summary_level, seq=None):
 
 def table_lookup_url(year, release, stusab, summary_level, seq=None):
     return lookup_template.format(year=year, release=int(release))
+
+
+def tiger_url(year, summary_level, stusab=None):
+    """
+
+    :param year: Vintage year
+    :param summary_level: Summary level, in number format
+    :param stusab: US State abbreviation
+    :return:
+    """
+
+
+    from geoid.censusnames import  stusab as _stusab_map
+    from geoid.core import names as _sl_names
+
+    sl_name_map = { v:k for k,v in _sl_names.items() }
+
+    stusab_map = { v:k for k,v in _stusab_map.items()}
+
+    state = stusab_map.get(stusab.upper())
+
+    try:
+        sl = sl_name_map[int(summary_level)].upper()
+    except ValueError:
+        sl_u = summary_level.upper()
+
+
+    # ftp://ftp2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_15_tract.zip
+
+    base =  f'shape+ftp://ftp2.census.gov/geo/tiger/TIGER{year}/{sl.upper()}'
+
+    if sl=='COUNTY':
+        return base+f'/tl_{year}_us_{sl.lower()}.zip'
+    else:
+        return base+f'/tl_{year}_{state:02}_{sl.lower()}.zip'
 

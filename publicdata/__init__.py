@@ -3,5 +3,6 @@
 
 """ """
 
-
-from rowgenerators import get_generator, parse_app_url, Downloader
+from rowgenerators.core import get_generator
+from rowgenerators.appurl import parse_app_url
+from rowgenerators.appurl.web import Downloader

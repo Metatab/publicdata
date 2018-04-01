@@ -125,5 +125,22 @@ class BasicTests(unittest.TestCase):
             except KeyError:
                 print(k, v)
 
-
         print(rows)
+
+
+    def test_geo_urls(self):
+        from itertools import islice
+
+        for year in [2016, 2017]:
+            for sl in [50,140, 160]:
+                for stusab in ['RI','AZ','NY']:
+                    us = tiger_url(year, sl, stusab)
+
+                    u = parse_app_url(us)
+                    print(type(u), u)
+                    r = u.get_resource().get_target()
+
+                    #for row in islice(r.generator, 2):
+                    #    print(row)
+
+                    break

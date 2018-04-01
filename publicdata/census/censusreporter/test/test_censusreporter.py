@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from appurl import parse_app_url
+from rowgenerators.appurl import parse_app_url
 
 
 def test_data(*paths):
@@ -15,8 +15,8 @@ def test_data(*paths):
 class BasicTests(unittest.TestCase):
 
     def test_basic(self):
-        from publicdata.censusreporter.url import CensusReporterURL
-        from publicdata.censusreporter.generator import CensusReporterSource
+        from publicdata.census.censusreporter import CensusReporterURL
+        from publicdata.census.censusreporter import CensusReporterSource
 
         u = parse_app_url('censusreporter://B01001/140/05000US06073')
 
@@ -26,7 +26,7 @@ class BasicTests(unittest.TestCase):
 
         B01001 = u.generator.dataframe()
 
-        self.assertEqual(3223096.0, B01001.B01001001.sum())
+        self.assertEqual(3253356.0, B01001.B01001001.sum())
 
         #print(B01001.titles.iloc[:2].T)
 
@@ -41,7 +41,6 @@ class BasicTests(unittest.TestCase):
 
         df = B01001[cols].copy()
 
-
         df['male_35_44'], df['male_35_44_m90'] = df.sum_m('B01001013', 'B01001014')
         df['female_35_44'], df['female_35_44_m90'] = df.sum_m('B01001037', 'B01001038')
 
@@ -49,14 +48,14 @@ class BasicTests(unittest.TestCase):
 
         print(len(df.proportion('male_35_44', 'female_35_44')))
 
-        df['mf_proprtion'] , df['mf_proprtion_m90'] = df.proportion('male_35_44', 'female_35_44')
+        df['mf_proprtion'], df['mf_proprtion_m90'] = df.proportion('male_35_44', 'female_35_44')
 
-        self.assertEqual(211707.0, df.female_35_44.dropna().sum())
+        self.assertEqual(212257.0, df.female_35_44.dropna().sum())
         self.assertEqual(82, int(df.m_ratio.dropna().sum()))
 
     def test_census_shapes(self):
-        from publicdata.censusreporter.url import CensusReporterShapeURL
-        from rowgenerators.appurl.shapefile import ShapefileUrl, ShapefileShpUrl
+        from publicdata.census.censusreporter.url import CensusReporterShapeURL
+        from rowgenerators.appurl.file import ShapefileUrl
         from rowgenerators.generator.shapefile import ShapefileSource
 
         u = parse_app_url('censusreportergeo://B01003/140/05000US06073')
@@ -75,7 +74,7 @@ class BasicTests(unittest.TestCase):
 
         self.assertIsInstance(g, ShapefileSource)
 
-        self.assertEquals(629, (len(list(g))))
+        self.assertEqual(629, (len(list(g))))
 
         return
 

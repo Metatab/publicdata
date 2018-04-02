@@ -6,7 +6,8 @@
 from publicdata.census.appurl import CensusUrl
 from publicdata.census.files.url_templates import tiger_url
 from publicdata.census.util import sub_geoids, sub_summarylevel
-from rowgenerators import AppUrlError, parse_app_url
+from rowgenerators import parse_app_url
+from rowgenerators.exceptions import AppUrlError
 
 class CensusFile(CensusUrl):
 

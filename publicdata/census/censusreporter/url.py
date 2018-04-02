@@ -12,7 +12,9 @@ from os.path import dirname, join
 import requests
 from publicdata.census.appurl import CensusUrl
 
-from rowgenerators import WebUrl, AppUrlError, parse_app_url
+from rowgenerators import parse_app_url
+from rowgenerators.appurl.web import WebUrl
+from rowgenerators.exceptions import AppUrlError
 from publicdata.census.censusreporter.jsonurl import CensusReporterJsonUrl
 
 

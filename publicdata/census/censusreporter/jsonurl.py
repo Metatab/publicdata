@@ -6,7 +6,7 @@
 
 """
 
-from rowgenerators.appurl import FileUrl
+from rowgenerators.appurl.file import FileUrl
 
 
 class CensusReporterJsonUrl(FileUrl):

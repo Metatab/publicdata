@@ -1,4 +1,5 @@
-from rowgenerators import Url, AppUrlError
+from rowgenerators import Url
+from rowgenerators.exceptions import AppUrlError
 from publicdata.census.util import sub_geoids, sub_summarylevel
 
 class CensusUrl(Url):

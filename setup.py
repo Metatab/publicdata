@@ -17,7 +17,7 @@ setup(
     packages=find_packages(),
     zip_safe=True,
     install_requires=[
-        'fs >= 2',h
+        'fs >= 2',
         'rowgenerators',
         'pandas',
         'requests',

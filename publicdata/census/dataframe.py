@@ -102,7 +102,7 @@ class CensusDataFrame(pd.DataFrame):
     @property
     def geo(self):
         """Return a geopandas dataframe with boundaries for the area"""
-        from publicdata.censusreporter.url import CensusReporterURL
+        from publicdata.census.censusreporter.url import CensusReporterURL
         from rowgenerators import get_generator
         from itertools import islice
         from metapack.jupyter.pandas import  MetatabDataFrame

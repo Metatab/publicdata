@@ -84,7 +84,7 @@ class CensusReporterSource(Source):
 
         table_id, summary_level, geoid = unquote(self.ref.target_file).split('/')
 
-        with open(self.ref.path) as f:
+        with open(self.ref.fspath) as f:
             data = json.load(f)
 
         # It looks like the JSON dicts may be properly sorted, but I'm not sure I can rely on that.

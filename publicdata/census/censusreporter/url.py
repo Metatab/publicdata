@@ -151,15 +151,15 @@ class CensusReporterShapeURL(CensusReporterURL):
         from os import symlink, remove
         from os.path import exists
 
-        from rowgenerators.appurl.file import ShapefileUrl
+        from rowgenerators.appurl.file.shapefile import ShapefileUrl
 
         r = ShapefileUrl(self.resource_url.get_resource())
 
         # The downloaded file doesn't have a .zip extension, so Fiona won't recognize
         # it as a Shapeilfe ZIP archive. So, just make a link.
 
-        p = r.inner.path
-        pz = p+'.zip'
+        p = r.inner.fspath
+        pz = p.with_suffix('.zip')
 
         if exists(pz):
             remove(pz)

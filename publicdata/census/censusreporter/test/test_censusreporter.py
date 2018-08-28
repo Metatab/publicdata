@@ -55,7 +55,7 @@ class BasicTests(unittest.TestCase):
 
     def test_census_shapes(self):
         from publicdata.census.censusreporter.url import CensusReporterShapeURL
-        from rowgenerators.appurl.file import ShapefileUrl
+        from rowgenerators.appurl.file.shapefile import ShapefileUrl
         from rowgenerators.generator.shapefile import ShapefileSource
 
         u = parse_app_url('censusreportergeo://B01003/140/05000US06073')

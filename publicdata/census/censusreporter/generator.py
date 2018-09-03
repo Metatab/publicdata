@@ -82,7 +82,7 @@ class CensusReporterSource(Source):
         :return:
         """
 
-        table_id, summary_level, geoid = unquote(self.ref.target_file).split('/')
+        year, release, geoid, summary_level, table_id,  = unquote(self.ref.target_file).split('/')
 
         with open(self.ref.fspath) as f:
             data = json.load(f)

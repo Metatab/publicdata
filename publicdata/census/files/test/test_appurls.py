@@ -12,7 +12,14 @@ class TestAppUrls(unittest.TestCase):
 
         from publicdata.census.files.appurl import CensusUrl
 
-        self.assertEqual('census://B17001/140/CA',str(CensusUrl('census:B17001/140/CA')))
+        u = CensusUrl('census:B17001/140/CA')
+
+        self.assertEqual('census://B17001/140/CA',str(u))
+
+        self.assertEqual('B17001', u.table_id)
+        self.assertEqual('140', u.summary_level)
+        self.assertEqual('04000US06', u.geoid)
+         
 
 if __name__ == '__main__':
     unittest.main()

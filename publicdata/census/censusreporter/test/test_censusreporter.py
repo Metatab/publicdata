@@ -53,12 +53,18 @@ class BasicTests(unittest.TestCase):
         self.assertEqual(212257.0, df.female_35_44.dropna().sum())
         self.assertEqual(82, int(df.m_ratio.dropna().sum()))
 
+    def test_names(self):
+
+        u = parse_app_url('censusreporter://05000US06073/140/B01001')
+        print(u.summary_level)
+
+
     def test_census_shapes(self):
         from publicdata.census.censusreporter.url import CensusReporterShapeURL
         from rowgenerators.appurl.file.shapefile import ShapefileUrl
         from rowgenerators.generator.shapefile import ShapefileSource
 
-        u = parse_app_url('censusreportergeo://B01003/140/05000US06073')
+        u = parse_app_url('censusreporter://05000US06073/140/B01001')
 
         self.assertTrue(str(u.resource_url).endswith('&format=shp'))
 
@@ -80,7 +86,7 @@ class BasicTests(unittest.TestCase):
 
     def test_geo(self):
 
-        u = parse_app_url('censusreporter://B01001/140/05000US06073')
+        u = parse_app_url('censusreporter://05000US06073/140/B01001')
 
         B01001 = u.generator.dataframe()
 

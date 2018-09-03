@@ -55,18 +55,23 @@ class TestGenerators(unittest.TestCase):
             w.writerows(t.row for t in ts.tables.values())
 
     def test_tablemeta(self):
+
         tm = TableMeta(2016, 1)
 
         tm._process()
 
-        self.assertEqual(1319, len(tm.tables))
+        self.assertEqual(1310, len(tm.tables))
 
-        self.assertEqual(['b15002h', 'c15002h', 'b15002i', 'c15002i',
-                          'b15003', 'c15003', 'b15010', 'c15010', 'c15010a', 'c15010b'],
-                         list(tm.tables.keys())[500:510])
+        self.assertEqual(sorted(['b00001', 'b00002', 'b01001', 'b01001a', 'b01001b', 'b01001c',
+                                 'b01001d', 'b01001e', 'b01001f', 'b01001g']),
+                         sorted(list(tm.tables.keys())[:10]))
+
+        self.assertEqual(sorted(['b15011', 'c15002d', 'c15002e', 'c15002f', 'c15002g',
+                                 'c15002h', 'c15002i', 'c15003', 'c15010', 'c15010a']),
+                         sorted(list(tm.tables.keys())[500:510]))
 
         self.assertEqual(tm.tables['c16004'].title,
-                         'AGE BY LANGUAGE SPOKEN AT HOME BY ABILITY TO SPEAK ENGLISH FOR THE POPULATION 5 YEARS AND OVER')
+                         'Age By Language Spoken At Home By Ability To Speak English For The Population 5 Years And Over')
 
         with open('/tmp/tables_meta.csv', 'w') as f:
             w = csv.writer(f)
@@ -125,14 +130,36 @@ class TestGenerators(unittest.TestCase):
         self.assertEqual(9061, sum(rows[4][7:]))
 
     def test_appurl(self):
+        from publicdata.census.util import sub_geoids, sub_summarylevel
 
         from rowgenerators import parse_app_url
+        from publicdata.census.exceptions import CensusParsingException
 
-        u = parse_app_url('census://2016/5/RI/140/B17001')
+        #self.assertEqual(245,list(parse_app_url('census://2016/5/RI/140/B17001').generator))
 
-        rows = list(u.generator)
+        #self.assertEqual(245, list(parse_app_url('census://RI/140/B17001').generator))
 
-        self.assertEqual(245,len(rows))
+        with self.assertRaises(ValueError):
+            sub_geoids('foobar')
+
+        u = parse_app_url('census://RI/140/B17001')
+        self.assertEqual('B17001', u.tableid)
+        self.assertEqual('04000US44', u.geoid)
+
+        u = parse_app_url('census://B17001/140/RI')
+        self.assertEqual('B17001', u.tableid)
+        self.assertEqual('04000US44', u.geoid)
+
+        u = parse_app_url('census://140/RI/B17001')
+        self.assertEqual('B17001', u.tableid)
+        self.assertEqual('04000US44', u.geoid)
+
+        with self.assertRaises(CensusParsingException):
+            parse_app_url('census://B17001/Frop/140')
+
+        with self.assertRaises(CensusParsingException):
+            parse_app_url('census://BINGO/RI/140')
+
 
     def test_appurl_US(self):
         from rowgenerators import parse_app_url
@@ -143,11 +170,20 @@ class TestGenerators(unittest.TestCase):
 
         logger.setLevel(logging.DEBUG)
 
-        u = parse_app_url('census://2016/5/US/50/B17001')
+        # Iterate over all counties in the US
+        u = parse_app_url('census://2016/5/US/county/B01003')
 
         rows = list(u.generator)
 
-        self.assertEqual(3272,len(rows))
+        states = set()
+        counties = set()
+        for row in rows[1:]:
+            states.add(row[1])
+            counties.add(row[3])
+
+        self.assertEqual(52, len(states))
+        self.assertEqual(3220, len(counties))
+        self.assertEqual(3220,len(rows[1:]))
 
     def test_sequence(self):
 

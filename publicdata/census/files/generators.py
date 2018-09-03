@@ -334,7 +334,13 @@ class CensusSource(Source):
 
         gid = AcsGeoid.parse(self.ref.geoid)
 
-        self.table = Table(self.ref.year, self.ref.release, gid.stusab,
+        try:
+            stusab = gid.stusab
+        except AttributeError:
+            gid.us# "US" level geoids don't have a state parameter.
+            stusab = "US"
+
+        self.table = Table(self.ref.year, self.ref.release, stusab,
                            str(self.ref.summary_level), self.ref.tableid)
 
         self._meta = TableMeta(self.ref.year, self.ref.release)
@@ -452,3 +458,4 @@ class CensusGeoSource(Source):
 
     def dataframe(self):
         pass
+

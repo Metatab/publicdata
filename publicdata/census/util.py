@@ -9,30 +9,32 @@ def sub_geoids(v):
     """Replace state abbreviations with state and national geoids"""
 
     from geoid.censusnames import stusab
-    from geoid.acs import Us, State
+    from geoid.acs import Us, State, AcsGeoid
 
-    if len(v) != 2:
-        return v
+    if len(v) == 2:
 
-    v = v.upper()
+        v = v.upper()
 
-    stmap = { v:k for k,v in stusab.items() }
+        stmap = { v:k for k,v in stusab.items() }
 
-    if v == 'US':
-        return str(Us())
+        if v == 'US':
+            return str(Us())
 
+        if v in stmap:
+            return str(State(stmap[v]))
 
-    if v not in stmap:
-        return v
-
-    return str(State(stmap[v]))
+    return str(AcsGeoid.parse(v))
 
 def sub_summarylevel(v):
     """Replace summary level names with SL numbers"""
 
     from geoid.core import names
 
-    return names.get(v.lower(), v)
+    try:
+        int(v)
+        return v
+    except ValueError:
+        return names[v.lower()]
 
 
 def melt(df):

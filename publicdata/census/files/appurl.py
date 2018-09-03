@@ -8,7 +8,7 @@ from publicdata.census.files.url_templates import tiger_url
 from publicdata.census.util import sub_geoids, sub_summarylevel
 from rowgenerators import parse_app_url
 from rowgenerators.exceptions import AppUrlError
-
+from warnings import warn
 class CensusFile(CensusUrl):
 
     """
@@ -22,10 +22,14 @@ class CensusFile(CensusUrl):
 
     """
 
+    default_year = 2016
+
     def __init__(self, url=None, downloader=None, **kwargs):
         super().__init__(url, downloader, **kwargs)
 
-        self._parts # Will raise on format errors
+        if self._year == 0:
+            warn("Census URL '{}' is missing a year. Assuming {} ".format(url, self.default_year))
+            self._year = self.default_year
 
     def _match(cls, url, **kwargs):
         return url.scheme.startswith('census')
@@ -48,25 +52,7 @@ class CensusFile(CensusUrl):
     def _match(cls, url, **kwargs):
         return url.scheme.startswith('census')
 
-    @property
-    def year(self):
-        return self._parts[0]
 
-    @property
-    def release(self):
-        return self._parts[1]
-
-    @property
-    def geoid(self):
-        return sub_geoids(self._parts[2])
-
-    @property
-    def summary_level(self):
-        return sub_summarylevel(self._parts[3])
-
-    @property
-    def tableid(self):
-        return sub_geoids(self._parts[4])
 
     @property
     def geo_url(self):
@@ -86,6 +72,11 @@ class CensusFile(CensusUrl):
     def meta(self):
         """Return a dict of column metadata"""
         return list(self.generator.meta)
+
+
+
+
+
 
     @property
     def dataframe(self):

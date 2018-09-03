@@ -36,8 +36,6 @@ class CensusReporterURL(CensusUrl):
     def __init__(self, url=None, downloader=None, **kwargs):
         super().__init__(url, downloader, **kwargs)
 
-        self._parts # Will raise on format errors
-
     @property
     def geo(self):
         """Return the geo version of this URL"""
@@ -49,14 +47,9 @@ class CensusReporterURL(CensusUrl):
         return url.scheme.startswith('censusreporter')
 
     @property
-    def cache_key(self):
-        """Return the path for this url's data in the cache"""
-        return "{}/{}/{}/{}.json".format(self.api_host, *self._parts)
-
-    @property
     def resource_url(self):
         return WebUrl("http://{host}/data/show/latest?table_ids={table_id}&geo_ids={sl}|{geoid}" \
-            .format(host=self.api_host,table_id=self.table_id, sl=self.summary_level, geoid=self.geoid),
+            .format(host=self.api_host,table_id=self.tableid, sl=self.summary_level, geoid=self.geoid),
                       downloader=self.downloader)
 
     def get_resource(self):
@@ -75,7 +68,7 @@ class CensusReporterURL(CensusUrl):
                 cache.settext(self.cache_key, json.dumps(data, indent=4))
 
         return parse_app_url(cache.getsyspath(self.cache_key),
-                             fragment=[join(*self._parts),None],
+                             fragment=[join(*self.path_parts),None],
                              ).as_type(CensusReporterJsonUrl)
 
     def get_target(self):
@@ -101,8 +94,6 @@ class CensusReporterShapeURL(CensusReporterURL):
 
     def __init__(self, url=None, downloader=None, **kwargs):
         super().__init__(url, downloader, **kwargs)
-
-        self._parts # Will raise on format errors
 
         self.scheme = 'censusreportergeo'
 
@@ -142,6 +133,8 @@ class CensusReporterShapeURL(CensusReporterURL):
 
     @property
     def resource_url(self):
+
+        print("!!!!", self.table_id, self.summary_level, self.geoid)
 
         return parse_app_url("http://{host}/1.0/data/download/latest?table_ids={table_id}&geo_ids={sl}|{geoid}&format=shp" \
             .format(host=self.api_host,table_id=self.table_id, sl=self.summary_level, geoid=self.geoid),

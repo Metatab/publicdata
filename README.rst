@@ -90,11 +90,11 @@ Or, use the URL directly::
     CensusReporterUrl(table='B17001',summarylevel='140',geoid='CA', downloader=Downloader())
 
 
-So, to get the population  of all of the counties in California:
+So, to get the population  of all of the counties in California::
 
     CensusReporterUrl(table='B17001',summarylevel='county',geoid='CA')
 
-or:
+or::
 
     from rowgenerators import parse_app_url
     parse_app_url('census://CA/county/B17001')
@@ -106,15 +106,15 @@ abbreviation, or 'US' for indicating all US states.
 Creating Census File Urls
 ----------------------
 
-The Census file URLS retrieve data directly from the Census FTP server. You can use the same 3-part url scheme as with Census Reporter, in which case you will get the 2016 5-year ACS. Or, you can specify the year and release: 
+The Census file URLS retrieve data directly from the Census FTP server. You can use the same 3-part url scheme as with Census Reporter, in which case you will get the 2016 5-year ACS. Or, you can specify the year and release::
 
     census://<year>/<release>/<geoid>/<summarylevel>/<table>
     
-Such as: 
+Such as::
 
     census://2015/5/CA/140/B17001
     
-or:
+or::
 
     from publicdata import CensusFileUrl
     rom rowgenerators import Downloader CensusFileUrl(year=2016,release=5,table='B17001',summarylevel='140',geoid='CA', downloader=Downloader())
@@ -122,25 +122,25 @@ or:
 Common Operations
 -----------------
 
-Construct the URL:
+Construct the URL::
 
     url = parse_app_url('census://2015/5/CA/140/B17001)
     
-Iterate rows, header first, then data:
+Iterate rows, header first, then data::
 
     for row in url.generator:
         print(row)
         
-or, to return dict-ish object
+or, to return dict-ish object::
 
     for row in url.generator.iterrows:
         print(row.geometry, row['geometry])
     
-Get a pandas dataframe ( Actually a CensusDataframe):
+Get a pandas dataframe ( Actually a CensusDataframe)::
 
     url.dataframe
     
-Get a Geopandas dataframe
+Get a Geopandas dataframe::
 
     url.geoframe
 

@@ -75,12 +75,12 @@ The summary level can also be expressed in text names, as described in the `geoi
 
 Usually the geoid is the abbreviation for a state or a county, and then the summary level describes the type of sub region within that state or county. For instance, all of the counties in California is '04000US06/140' or 'CA/county', and all of the places in San Diego county is '05000US06073/160' or '05000US06073/place'.
 
-You can look up the table ideas at `Census Reporter <http://censusreporter.org>`_ or `American Fact Finder` <https://factfinder.census.gov/>`_. 
+You can look up the table ideas at `Census Reporter <http://censusreporter.org>`_ or `American Fact Finder <https://factfinder.census.gov/>`_ . 
 
 Creating Census Reporter Urls
 -----------------------------
 
-The ``censusreporter:``  url scheme retrieves data from `Census Reporter` <http://censusreporter.org>`_. The structure of the URL is::
+The ``censusreporter:``  url scheme retrieves data from `Census Reporter <http://censusreporter.org>`_ . The structure of the URL is::
 
     censusreporter://<geoid>/<summarylevel>/<table>
 

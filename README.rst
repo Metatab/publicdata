@@ -93,7 +93,9 @@ Or, use the URL directly:
     CensusReporterUrl(table='B17001',summarylevel='140',geoid='CA', downloader=Downloader())
 
 
-So, to get the population  of all of the counties in California::
+So, to get the population  of all of the counties in California:
+
+.. code-block:: python
 
     CensusReporterUrl(table='B17001',summarylevel='county',geoid='CA')
 

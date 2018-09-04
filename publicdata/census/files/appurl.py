@@ -9,7 +9,8 @@ from publicdata.census.util import sub_geoids, sub_summarylevel
 from rowgenerators import parse_app_url
 from rowgenerators.exceptions import AppUrlError
 from warnings import warn
-class CensusFile(CensusUrl):
+
+class CensusFileUrl(CensusUrl):
 
     """
     A URL that references row data from American Community Survey files
@@ -25,11 +26,16 @@ class CensusFile(CensusUrl):
     default_year = 2016
 
     def __init__(self, url=None, downloader=None, **kwargs):
+
+
         super().__init__(url, downloader, **kwargs)
 
         if self._year == 0:
             warn("Census URL '{}' is missing a year. Assuming {} ".format(url, self.default_year))
             self._year = self.default_year
+
+
+        self.scheme = 'census'
 
     def _match(cls, url, **kwargs):
         return url.scheme.startswith('census')
@@ -52,8 +58,6 @@ class CensusFile(CensusUrl):
     def _match(cls, url, **kwargs):
         return url.scheme.startswith('census')
 
-
-
     @property
     def geo_url(self):
         """Return a url for the geofile for this Census file"""
@@ -74,16 +78,6 @@ class CensusFile(CensusUrl):
         return list(self.generator.meta)
 
 
-
-
-
-
-    @property
-    def dataframe(self):
-        """Return a Pandas dataframe with the data for this table"""
-        return self.generator.dataframe
-
-
     def join(self, s):
         raise NotImplementedError()
 
@@ -93,3 +87,4 @@ class CensusFile(CensusUrl):
     def join_target(self, tf):
         raise NotImplementedError()
 
+CensusFile = CensusFileUrl

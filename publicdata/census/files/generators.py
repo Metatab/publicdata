@@ -90,7 +90,10 @@ class SequenceFile(_CensusFile):
 
         self.table_meta = tablemeta(self.year, self.release)
 
-        self._file_headers, self._descriptions = list(parse_app_url(self.headerurl).generator)
+        self._file_headers, _descriptions = list(parse_app_url(self.headerurl).generator)
+
+        # At least some of the fields have '%' as a seperator
+        self._descriptions =  [ c.replace('%',' -') for c in _descriptions]
 
     @property
     def file_headers(self):
@@ -102,6 +105,11 @@ class SequenceFile(_CensusFile):
 
     @property
     def descriptions(self):
+
+        # The descriptions is a 2-row Excel file, intended to be used as the headers
+        # for the data files. The first row is the colum ids, and the second is
+        # the titles. The first 6 columns are for STUSAB, SEQUENCE, LOGRECNO, etc,
+        # so they are cut off.
 
         est_headers = self._descriptions[6:]
         margin_headers = ['' for e in est_headers]
@@ -345,6 +353,10 @@ class CensusSource(Source):
 
         self._meta = TableMeta(self.ref.year, self.ref.release)
 
+        self._source_url = kwargs.get('source_url')
+
+        assert(self._source_url)
+
         assert isinstance(ref, CensusUrl)
 
     @property
@@ -394,51 +406,12 @@ class CensusSource(Source):
 
         rows = list(islice(self, 1, None))
 
-        df = CensusDataFrame(rows, schema=self.meta, table=self.table, url=None)
+        df = CensusDataFrame(rows, schema=self.meta, table=self.table, url=self._source_url)
 
         df.release = self.ref.release
 
         return df.replace('.', np.nan).set_index('GEOID')
 
-    @property
-    def geo_url(self):
-        return self.ref.geo_url
-
-    @property
-    def geo(self):
-        """Return a generator for the geographic file"""
-        return self.geo_url.get_resource().get_target().generator
-
-    @property
-    def geoframe(self):
-
-        import geopandas as gpd
-        from shapely.geometry.polygon import BaseGeometry
-        from shapely.wkt import loads
-
-        rows = list(self.geo)
-
-        gdf = gpd.GeoDataFrame(rows[1:], columns=[e.lower() for e in rows[0]])
-
-        first = next(gdf.iterrows())[1].geometry
-
-        if isinstance(first, str):
-            shapes = [loads(row['geometry']) for i, row in gdf.iterrows()]
-
-        elif not isinstance(first, BaseGeometry):
-            # If we are reading a metatab package, the geometry column's type should be
-            # 'geometry' which will give the geometry values class type of
-            # rowpipe.valuetype.geo.ShapeValue. However, there are other
-            # types of objects that have a 'shape' property.
-
-            shapes = [row['geometry'].shape for i, row in gdf.iterrows()]
-
-        else:
-            shapes = gdf['geometry']
-
-        gdf['geometry'] = gpd.GeoSeries(shapes)
-
-        return gdf.set_geometry('geometry').set_index('geoid')
 
     def __iter__(self):
         yield from self.table

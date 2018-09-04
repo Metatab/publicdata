@@ -1,12 +1,10 @@
 
-import unittest
-import requests
-from publicdata.census.files.url_templates import *
-from publicdata.census.files.metafiles import Table, Column, TableShell, TableLookup, TableMeta
-from publicdata.census.files.generators import SequenceFile, GeoFile, Table
-from rowgenerators import parse_app_url
 from itertools import islice
+
 import csv
+import unittest
+from publicdata.census.files.generators import SequenceFile, GeoFile, Table
+from publicdata.census.files.metafiles import Table as MetaTable, Column, TableShell, TableLookup, TableMeta
 
 
 class TestGenerators(unittest.TestCase):
@@ -21,13 +19,13 @@ class TestGenerators(unittest.TestCase):
 
         print(list(ts.tables.keys())[500:550])
 
-        self.assertEqual(ts.tables['C16004'].title,
+        self.assertEqual(ts.tables['c16004'].title.upper(),
                          'AGE BY LANGUAGE SPOKEN AT HOME BY ABILITY TO SPEAK ENGLISH FOR THE POPULATION 5 YEARS AND OVER')
 
         with open('/tmp/tables_shell.csv', 'w') as f:
             w = csv.writer(f)
 
-            w.writerow(Table.csv_header)
+            w.writerow(MetaTable.csv_header)
             w.writerows(t.row for t in ts.tables.values())
 
     def test_tablelookup(self):
@@ -40,13 +38,13 @@ class TestGenerators(unittest.TestCase):
 
         print(list(ts.tables.keys())[500:550])
 
-        self.assertEqual(ts.tables['C16004'].title,
+        self.assertEqual(ts.tables['c16004'].title.upper(),
                          'AGE BY LANGUAGE SPOKEN AT HOME BY ABILITY TO SPEAK ENGLISH FOR THE POPULATION 5 YEARS AND OVER')
 
         with open('/tmp/tables_lookup.csv', 'w') as f:
             w = csv.writer(f)
 
-            w.writerow(Table.csv_header)
+            w.writerow(MetaTable.csv_header)
             w.writerows(t.row for t in ts.tables.values())
 
     def test_tablemeta(self):
@@ -58,15 +56,14 @@ class TestGenerators(unittest.TestCase):
 
         print(list(tm.tables.keys())[500:550])
 
-        self.assertEqual(tm.tables['C16004'].title,
+        self.assertEqual(tm.tables['c16004'].title.upper(),
                          'AGE BY LANGUAGE SPOKEN AT HOME BY ABILITY TO SPEAK ENGLISH FOR THE POPULATION 5 YEARS AND OVER')
 
         with open('/tmp/tables_meta.csv', 'w') as f:
             w = csv.writer(f)
 
-            w.writerow(Table.csv_header)
+            w.writerow(MetaTable.csv_header)
             w.writerows(t.row for t in tm.tables.values())
-
 
         with open('/tmp/columns_meta.csv', 'w') as f:
             w = csv.writer(f)

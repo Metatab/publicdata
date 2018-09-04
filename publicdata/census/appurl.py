@@ -31,6 +31,23 @@ class CensusUrl(Url):
     default_release = 5 # Default release, if not specified
 
     def __init__(self, url=None, downloader=None, **kwargs):
+
+        if any(['table' in kwargs, 'geoid' in kwargs,' summarylevel' in kwargs]):
+
+            if 'year' in kwargs:
+                parts = [kwargs['year'], kwargs.get('release', self.default_release)]
+
+            else:
+                parts = []
+
+            parts += [kwargs.get('geoid'), kwargs.get('summarylevel'), kwargs.get('table')]
+
+            if len(parts) == 3:
+                url = "{}://{}/{}/{}".format(self.proto, *parts )
+            else:
+                url = "{}:/{}/{}/{}/{}/{}".format(self.proto, *parts)
+
+
         super().__init__(url, downloader, **kwargs)
 
         if not self.netloc:
@@ -53,12 +70,10 @@ class CensusUrl(Url):
 
             parts = self._guess(parts)
 
-            from rowgenerators.appurl.util import unparse_url_dict
-
             if parts_len  == 3:
                 new_url =  "{}://{}/{}/{}".format(self.proto, *(parts[2:]))
             else:
-                new_url =  "{}:/{}/{}/{}/{}/{}".format(self.proto, *(parts[1:]))
+                new_url =  "{}:/{}/{}/{}/{}/{}".format(self.proto, *(parts))
 
             warn("Badly formatted Census URL. The url '{}' should be '{}' ".format(url, new_url))
 
@@ -188,7 +203,6 @@ class CensusUrl(Url):
         return sub_summarylevel(self._summary_level)
 
 
-
     @property
     def tableid(self):
         '''Return the table id'''
@@ -201,6 +215,26 @@ class CensusUrl(Url):
     @property
     def release(self):
         return self._release
+
+
+    @property
+    def geo_url(self):
+        """Return the URL for geographic data for this URL"""
+        raise NotImplemented()
+
+    @property
+    def dataframe(self):
+        """Return a Pandas dataframe with the data for this table"""
+        return self.generator.dataframe()
+
+    @property
+    def geo_generator(self):
+        return self.geo_url.get_resource().get_target().generator
+
+    @property
+    def geoframe(self):
+
+        return self.geo_generator.geoframe()
 
     @property
     def cache_key(self):

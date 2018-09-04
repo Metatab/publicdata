@@ -7,6 +7,9 @@ import logging
 
 logger = logging.getLogger('publicdata.census.files')
 
+
+from .appurl import CensusFileUrl
+
 def acs_dataframe(year, release, stateab, summary_level, table):
     """
     Return a dataframe with ACS data

@@ -10,16 +10,31 @@ class TestAppUrls(unittest.TestCase):
 
     def test_basic(self):
 
-        from publicdata.census.files.appurl import CensusUrl
+        from publicdata.census.files import CensusUrl
+        from publicdata.census.censusreporter import CensusReporterURL
 
-        u = CensusUrl('census:B17001/140/CA')
+        u = CensusUrl('census://CA/140/B17001')
 
-        self.assertEqual('census://B17001/140/CA',str(u))
+        self.assertEqual('census://CA/140/B17001',str(u))
 
-        self.assertEqual('B17001', u.table_id)
+        self.assertEqual('B17001', u.tableid)
         self.assertEqual('140', u.summary_level)
         self.assertEqual('04000US06', u.geoid)
-         
+
+        url = CensusUrl(table='B17001', summarylevel='140', geoid='04000US06')
+
+        self.assertEqual('B17001', u.tableid)
+        self.assertEqual('140', u.summary_level)
+        self.assertEqual('04000US06', u.geoid)
+
+        url = CensusReporterURL(table='B17001', summarylevel='140', geoid='04000US06')
+
+        self.assertEqual('B17001', u.tableid)
+        self.assertEqual('140', u.summary_level)
+        self.assertEqual('04000US06', u.geoid)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

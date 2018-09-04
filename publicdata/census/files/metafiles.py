@@ -9,6 +9,7 @@ from rowgenerators import parse_app_url
 
 class Table(object):
     """Represents a  Census Table"""
+
     csv_header = 'id seq start title universe subject'.split()
 
     def __init__(self, table_id, title, universe=None, seq=None, fileid=None, startpos=None, subject=None):
@@ -52,8 +53,6 @@ class Table(object):
         {column_rows}
         </table>
         """
-
-
 
 class Column(object):
     """Represents a column in a Census Table"""

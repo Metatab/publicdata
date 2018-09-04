@@ -6,3 +6,6 @@
 from rowgenerators.core import get_generator
 from rowgenerators.appurl import parse_app_url
 from rowgenerators.appurl.web import Downloader
+
+from .census.files.appurl import CensusFileUrl
+from .census.censusreporter import CensusReporterUrl

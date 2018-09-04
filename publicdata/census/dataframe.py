@@ -99,34 +99,14 @@ class CensusDataFrame(pd.DataFrame):
         for t in self.itertuples():
             yield list(t)
 
+
     @property
-    def geo(self):
+    def geoframe(self):
         """Return a geopandas dataframe with boundaries for the area"""
-        from publicdata.census.censusreporter.url import CensusReporterURL
-        from rowgenerators import get_generator
-        from itertools import islice
-        from metapack.jupyter.pandas import  MetatabDataFrame
 
-        if isinstance(self._url, CensusReporterURL):
-            geo_url = self._url.geo
+        return self._url.geoframe
 
-            r = geo_url.get_resource()
-            t = r.get_target()
-
-            g = get_generator(t)
-
-            headers = next(islice(g, 0, 1))
-            data = islice(g, 1, None)
-
-            df = MetatabDataFrame(list(data), columns=headers, metatab_resource=self)
-
-            return df.geo
-
-        else:
-            raise PublicDataException("Dataframe doesn't have a CensusReporterURL, so can't find geo source")
-
-
-    def sum_m(self, *cols):
+    def sum_m(self, *cols, inplace=False):
         """Sum a set of Dataframe series and return the summed series and margin. The series must have names"""
 
         # See the ACS General Handbook, Appendix A, "Calculating Margins of Error for Derived Estimates".

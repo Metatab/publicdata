@@ -18,7 +18,7 @@ from rowgenerators.exceptions import AppUrlError
 from publicdata.census.censusreporter.jsonurl import CensusReporterJsonUrl
 
 
-class CensusReporterURL(CensusUrl):
+class CensusReporterUrl(CensusUrl):
     """A URL for censusreporter tables.
 
     General form:
@@ -34,10 +34,13 @@ class CensusReporterURL(CensusUrl):
     api_host = 'api.censusreporter.org/1.0'
 
     def __init__(self, url=None, downloader=None, **kwargs):
+
+        self._proto = 'censusreporter'
+
         super().__init__(url, downloader, **kwargs)
 
     @property
-    def geo(self):
+    def geo_url(self):
         """Return the geo version of this URL"""
 
         return CensusReporterShapeURL(str(self), downloader=self._downloader)
@@ -76,6 +79,7 @@ class CensusReporterURL(CensusUrl):
         raise NotImplementedError()
 
 
+CensusReporterURL = CensusReporterUrl # Legacy Name
 
 class CensusReporterShapeURL(CensusReporterURL):
     """A URL for censusreporter tables.
@@ -97,47 +101,18 @@ class CensusReporterShapeURL(CensusReporterURL):
 
         self.scheme = 'censusreportergeo'
 
-    @property
-    def _parts(self):
-        if not self.netloc:
-            # If the URL didn't have ://, there is no netloc
-            parts =  self.path.strip('/').split('/')
-        else:
-            parts = tuple( [self.netloc] + self.path.strip('/').split('/'))
-
-        if len(parts) != 3:
-            raise AppUrlError("Census reporters must have three path components. Got: '{}' ".format(parts))
-
-        return parts
-
-    @property
-    def table_id(self):
-        return self._parts[0]
-
-    @property
-    def summary_level(self):
-       return self._parts[1]
-
-    @property
-    def geoid(self):
-        return self._parts[2]
 
     @classmethod
     def _match(cls, url, **kwargs):
         return url.scheme.startswith('censusreporter')
 
-    @property
-    def cache_key(self):
-        """Return the path for this url's data in the cache"""
-        return "{}/{}/{}/{}.zip".format(self.api_host, *self._parts)
+
 
     @property
     def resource_url(self):
 
-        print("!!!!", self.table_id, self.summary_level, self.geoid)
-
         return parse_app_url("http://{host}/1.0/data/download/latest?table_ids={table_id}&geo_ids={sl}|{geoid}&format=shp" \
-            .format(host=self.api_host,table_id=self.table_id, sl=self.summary_level, geoid=self.geoid),
+            .format(host=self.api_host,table_id=self.tableid, sl=self.summary_level, geoid=self.geoid),
                       downloader=self.downloader)
 
     def get_resource(self):

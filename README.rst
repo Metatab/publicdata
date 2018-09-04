@@ -52,9 +52,9 @@ Where:
 
 The Geoid is an ACS style geoid, such as '04000US06', or a US state abbreviation ( 'AZ' or "CA' ) or 'US'. The geoid defines the area that contains the data to be returned. See the [Geographic Codes Lookup](https://census.missouri.edu/geocodes/) web application for more details about geoids and how to find them. 
 
-The summary level can also be expressed in text names, as described in the [geoid package documentation](https://github.com/Metatab/geoid). The most common of these names, and their numeric codes, are:
+The summary level can also be expressed in text names, as described in the [geoid package documentation](https://github.com/Metatab/geoid). The most common of these names, and their numeric codes, are::
 
-```
+
 'us': 10,
 'region': 20,
 'division': 30,
@@ -70,7 +70,7 @@ The summary level can also be expressed in text names, as described in the [geoi
 'sdsec': 960,
 'sduni': 970,
 'zcta': 860
-```
+
 
 Usually the geoid is the abbreviation for a state or a county, and then the summary level describes the type of sub region within that state or county. For instance, all of the counties in California is '04000US06/140' or 'CA/county', and all of the places in San Diego county is '05000US06073/160' or '05000US06073/place'.
 

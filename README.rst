@@ -79,11 +79,11 @@ You can look up the table ideas at [Census Reporter](http://censusreporter.org) 
 Creating Census Reporter Urls
 -----------------------------
 
-The ``censusreporter:``  url scheme retrieves data from (Census Reporter)[http://censusreporter.org]. The structure of the URL is
+The ``censusreporter:``  url scheme retrieves data from (Census Reporter)[http://censusreporter.org]. The structure of the URL is::
 
     censusreporter://<geoid>/<summarylevel>/<table>
 
-Or, use the URL directly: 
+Or, use the URL directly::
 
     from publicdata import CensusReporterUrl
     from rowgenerators import Downloader
@@ -147,9 +147,12 @@ Get a Geopandas dataframe
 Census Dataframes
 -----------------
 
-
-The ``.dataframe`` property returns a ``CensusDataFrame`` which has some special features for working with Census data. 
-
+The ``.dataframe`` property returns a ``CensusDataFrame`` which has some
+special features for working with Census data, including margin-aware
+summation, ratios, proportions and margin manipulations. See the [Special
+Features of Census
+Dataframes](https://github.com/Metatab/publicdata/blob/master/notebooks/Special%
+20Features%20of%20Census%20Dataframe.ipynb) notebook for details.
 
 
 Goals

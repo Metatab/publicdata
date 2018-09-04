@@ -52,7 +52,8 @@ Where:
 
 The Geoid is an ACS style geoid, such as '04000US06', or a US state abbreviation ( 'AZ' or "CA' ) or 'US'. The geoid defines the area that contains the data to be returned. See the `Geographic Codes Lookup <https://census.missouri.edu/geocodes/>`_ web application for more details about geoids and how to find them. 
 
-The summary level can also be expressed in text names, as described in the`geoid package documentation <https://github.com/Metatab/geoid>`_. The most common of these names, and their numeric codes, are::
+The summary level can also be expressed in text names, as described in the `geoid package documentation <https://github.com/Metatab/geoid>`_
+. The most common of these names, and their numeric codes, are::
 
 
 'us': 10,
@@ -124,7 +125,7 @@ Common Operations
 
 Construct the URL::
 
-    url = parse_app_url('census://2015/5/CA/140/B17001)
+    url = parse_app_url('census://2015/5/CA/140/B17001')
     
 Iterate rows, header first, then data::
 

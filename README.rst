@@ -37,7 +37,7 @@ from the Census department's FTP servers, and the ``censusreporter`` urls get
 data from the CensusReporter.org apis. Both also have access to geography
 files, but the ``census`` urls have a richer interface for metadata.
 
-The general schemes for the URLS are: 
+The general schemes for the URLS are::
 
     <scheme>:/[/year/release]/<geoid>/<summarylevel>/<table>
 
@@ -84,7 +84,9 @@ The ``censusreporter:``  url scheme retrieves data from `Census Reporter <http:/
 
     censusreporter://<geoid>/<summarylevel>/<table>
 
-Or, use the URL directly::
+Or, use the URL directly:
+
+.. code-block:: python
 
     from publicdata import CensusReporterUrl
     from rowgenerators import Downloader
@@ -95,7 +97,9 @@ So, to get the population  of all of the counties in California::
 
     CensusReporterUrl(table='B17001',summarylevel='county',geoid='CA')
 
-or::
+or:
+
+.. code-block:: python
 
     from rowgenerators import parse_app_url
     parse_app_url('census://CA/county/B17001')
@@ -115,7 +119,9 @@ Such as::
 
     census://2015/5/CA/140/B17001
     
-or::
+or:
+
+.. code-block:: python
 
     from publicdata import CensusFileUrl
     rom rowgenerators import Downloader CensusFileUrl(year=2016,release=5,table='B17001',summarylevel='140',geoid='CA', downloader=Downloader())
@@ -123,25 +129,35 @@ or::
 Common Operations
 -----------------
 
-Construct the URL::
+Construct the URL:
+
+.. code-block:: python
 
     url = parse_app_url('census://2015/5/CA/140/B17001')
     
-Iterate rows, header first, then data::
+Iterate rows, header first, then data:
+
+.. code-block:: python
 
     for row in url.generator:
         print(row)
         
-or, to return dict-ish object::
+or, to return dict-ish object:
+
+.. code-block:: python
 
     for row in url.generator.iterrows:
         print(row.geometry, row['geometry])
     
-Get a pandas dataframe ( Actually a CensusDataframe)::
+Get a pandas dataframe ( Actually a CensusDataframe):
+
+.. code-block:: python
 
     url.dataframe
     
-Get a Geopandas dataframe::
+Get a Geopandas dataframe:
+
+.. code-block:: python
 
     url.geoframe
 

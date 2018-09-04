@@ -50,9 +50,9 @@ Where:
 - <summarylevel> is either a summary level numeric code, or a summary level name
 - <table> is a census table id
 
-The Geoid is an ACS style geoid, such as '04000US06', or a US state abbreviation ( 'AZ' or "CA' ) or 'US'. The geoid defines the area that contains the data to be returned. See the [Geographic Codes Lookup](https://census.missouri.edu/geocodes/) web application for more details about geoids and how to find them. 
+The Geoid is an ACS style geoid, such as '04000US06', or a US state abbreviation ( 'AZ' or "CA' ) or 'US'. The geoid defines the area that contains the data to be returned. See the `Geographic Codes Lookup <https://census.missouri.edu/geocodes/>`_ web application for more details about geoids and how to find them. 
 
-The summary level can also be expressed in text names, as described in the [geoid package documentation](https://github.com/Metatab/geoid). The most common of these names, and their numeric codes, are::
+The summary level can also be expressed in text names, as described in the`geoid package documentation <https://github.com/Metatab/geoid>`_. The most common of these names, and their numeric codes, are::
 
 
 'us': 10,
@@ -74,12 +74,12 @@ The summary level can also be expressed in text names, as described in the [geoi
 
 Usually the geoid is the abbreviation for a state or a county, and then the summary level describes the type of sub region within that state or county. For instance, all of the counties in California is '04000US06/140' or 'CA/county', and all of the places in San Diego county is '05000US06073/160' or '05000US06073/place'.
 
-You can look up the table ideas at [Census Reporter](http://censusreporter.org) or [American Fact Finder](https://factfinder.census.gov/). 
+You can look up the table ideas at `Census Reporter <http://censusreporter.org>`_ or `American Fact Finder` <https://factfinder.census.gov/>`_. 
 
 Creating Census Reporter Urls
 -----------------------------
 
-The ``censusreporter:``  url scheme retrieves data from (Census Reporter)[http://censusreporter.org]. The structure of the URL is::
+The ``censusreporter:``  url scheme retrieves data from `Census Reporter` <http://censusreporter.org>`_. The structure of the URL is::
 
     censusreporter://<geoid>/<summarylevel>/<table>
 
@@ -149,10 +149,9 @@ Census Dataframes
 
 The ``.dataframe`` property returns a ``CensusDataFrame`` which has some
 special features for working with Census data, including margin-aware
-summation, ratios, proportions and margin manipulations. See the [Special
-Features of Census
-Dataframes](https://github.com/Metatab/publicdata/blob/master/notebooks/Special%
-20Features%20of%20Census%20Dataframe.ipynb) notebook for details.
+summation, ratios, proportions and margin manipulations. See the `Special
+Features of Census Dataframes` <https://github.com/Metatab/publicdata/blob/master/notebooks/Special%
+20Features%20of%20Census%20Dataframe.ipynb>`_ notebook for details.
 
 
 Goals

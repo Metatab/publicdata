@@ -151,7 +151,7 @@ Census Dataframes
 The ``.dataframe`` property returns a ``CensusDataFrame`` which has some
 special features for working with Census data, including margin-aware
 summation, ratios, proportions and margin manipulations. See the `Special
-Features of Census Dataframes` <https://github.com/Metatab/publicdata/blob/master/notebooks/Special%
+Features of Census Dataframes <https://github.com/Metatab/publicdata/blob/master/notebooks/Special%
 20Features%20of%20Census%20Dataframe.ipynb>`_ notebook for details.
 
 

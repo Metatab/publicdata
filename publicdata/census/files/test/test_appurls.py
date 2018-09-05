@@ -10,10 +10,9 @@ class TestAppUrls(unittest.TestCase):
 
     def test_basic(self):
 
-        from publicdata.census.files import CensusUrl
-        from publicdata.census.censusreporter import CensusReporterURL
+        from publicdata import CensusFileUrl, CensusReporterUrl
 
-        u = CensusUrl('census://CA/140/B17001')
+        u = CensusFileUrl('census://CA/140/B17001')
 
         self.assertEqual('census://CA/140/B17001',str(u))
 
@@ -21,13 +20,13 @@ class TestAppUrls(unittest.TestCase):
         self.assertEqual('140', u.summary_level)
         self.assertEqual('04000US06', u.geoid)
 
-        url = CensusUrl(table='B17001', summarylevel='140', geoid='04000US06')
+        url = CensusFileUrl(table='B17001', summarylevel='140', geoid='04000US06')
 
         self.assertEqual('B17001', u.tableid)
         self.assertEqual('140', u.summary_level)
         self.assertEqual('04000US06', u.geoid)
 
-        url = CensusReporterURL(table='B17001', summarylevel='140', geoid='04000US06')
+        url = CensusReporterUrl(table='B17001', summarylevel='140', geoid='04000US06')
 
         self.assertEqual('B17001', u.tableid)
         self.assertEqual('140', u.summary_level)

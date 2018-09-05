@@ -192,7 +192,8 @@ class TestGenerators(unittest.TestCase):
         h, f, m = list(zip(sf.file_headers, sf.descriptions, sf.meta))[60]
 
         self.assertEqual('B01001G_028', h)
-        self.assertEqual('SEX BY AGE (TWO OR MORE RACES) for People Who Are Two Or More Races% Female:% 55 to 64 years',
+        self.assertEqual('SEX BY AGE (TWO OR MORE RACES) for People Who Are Two Or More Races - Female: - 55 to 64 '
+                         'years',
                          f)
 
         for h,f,m in list(zip(sf.file_headers, sf.descriptions, sf.meta)):
@@ -223,7 +224,7 @@ class TestGenerators(unittest.TestCase):
 
         u = parse_app_url('census://2016/5/RI/140/B01002')
 
-        gdf = u.generator.geoframe
+        gdf = u.geoframe
 
         print(gdf.head())
         print(gdf.geometry.head())

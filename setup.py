@@ -27,11 +27,13 @@ setup(
         'appurl.urls': [
             "censusreporter: = publicdata.census.censusreporter:CensusReporterURL",
             "censusreportergeo: = publicdata.census.censusreporter:CensusReporterShapeURL",
-            "census: = publicdata.census.files.appurl:CensusFile"
+            "census: = publicdata.census.files.appurl:CensusFile",
+            "censusgeo: = publicdata.census.files.appurl:CensusGeoUrl"
         ],
         'rowgenerators': [
             "CRJSON+ = publicdata.census.censusreporter:CensusReporterSource",
-            "census: = publicdata.census.files.generators:CensusSource"
+            "census: = publicdata.census.files.generators:CensusSource",
+            "censusgeo: = publicdata.census.files.generators:CensusGeoSource"
         ]
     },
 )

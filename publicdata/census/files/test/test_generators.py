@@ -12,6 +12,11 @@ import logging
 
 class TestGenerators(unittest.TestCase):
 
+    def setUp(self):
+        import warnings
+        warnings.simplefilter('ignore')
+
+
     def test_tableshell(self):
 
         ts = TableShell(2016, 1)
@@ -220,14 +225,18 @@ class TestGenerators(unittest.TestCase):
         self.assertEqual(9375, int(df['B01002_002'].sum()))
         self.assertEqual(1171, int(df['B01002_002_m90'].sum()))
 
+
     def test_geo_dataframe(self):
 
         u = parse_app_url('census://2016/5/RI/140/B01002')
 
-        gdf = u.geoframe
+        self.assertEqual(244, len(u.geoframe().geometry))
 
-        print(gdf.head())
-        print(gdf.geometry.head())
+        u = parse_app_url('censusgeo://2016/5/RI/140')
+
+        self.assertEqual(244, len(u.geoframe().geometry))
+
+
 
 if __name__ == '__main__':
     unittest.main()

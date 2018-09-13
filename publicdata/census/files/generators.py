@@ -424,11 +424,12 @@ class CensusSource(Source):
     def iterdata(self):
         yield from self.table.iterdata
 
-class CensusGeoSource(Source):
+from rowgenerators.generator.shapefile import ShapefileSource
+
+class CensusGeoSource(ShapefileSource):
 
     def __init__(self, ref, cache=None, working_dir=None, **kwargs):
         super().__init__(ref, cache, working_dir, **kwargs)
 
-    def dataframe(self):
-        pass
+
 

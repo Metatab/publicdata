@@ -44,6 +44,8 @@ class CensusUrl(Url):
 
             if len(parts) == 3:
                 url = "{}://{}/{}/{}".format(self.proto, *parts )
+            if len(parts) == 4: # Form for censusgeo urls
+                url = "{}://{}/{}/{}/{}".format(self.proto, *parts )
             else:
                 url = "{}:/{}/{}/{}/{}/{}".format(self.proto, *parts)
 
@@ -61,6 +63,9 @@ class CensusUrl(Url):
 
         if len(parts) == 3:
             parts = [self.default_year, self.default_release ] + parts
+
+        if len(parts) == 4:
+            parts =  parts + ['B00000'] # For Geo URL, a non-existent table
 
 
         if len(parts)  != 5:
@@ -222,7 +227,7 @@ class CensusUrl(Url):
         """Return the URL for geographic data for this URL"""
         raise NotImplemented()
 
-    @property
+
     def dataframe(self):
         """Return a Pandas dataframe with the data for this table"""
         return self.generator.dataframe()
@@ -231,9 +236,8 @@ class CensusUrl(Url):
     def geo_generator(self):
         return self.geo_url.get_resource().get_target().generator
 
-    @property
-    def geoframe(self):
 
+    def geoframe(self):
         return self.geo_generator.geoframe()
 
     @property

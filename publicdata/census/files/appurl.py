@@ -34,38 +34,51 @@ class CensusFileUrl(CensusUrl):
             warn("Census URL '{}' is missing a year. Assuming {} ".format(url, self.default_year))
             self._year = self.default_year
 
-
         self.scheme = 'census'
 
-    def _match(cls, url, **kwargs):
-        return url.scheme.startswith('census')
-
-    @property
-    def _parts(self):
-        if not self.netloc:
-            # If the URL didn't have ://, there is no netloc
-            parts = self.path.strip('/').split('/')
-        else:
-            parts = tuple([self.netloc] + self.path.strip('/').split('/'))
-
-        if len(parts) != 5:
-            raise AppUrlError("Census reporters must have three path components. Got: '{}' ".format(parts)+
-                              "Format is census://year/release/geo_containment/summary_level/table ")
-
-        return parts
 
     @classmethod
     def _match(cls, url, **kwargs):
-        return url.scheme.startswith('census')
+        return url.scheme == 'census'
 
     @property
     def geo_url(self):
         """Return a url for the geofile for this Census file"""
         from geoid.acs import AcsGeoid
 
-        us = tiger_url(self.year, self.summary_level, AcsGeoid.parse(self.geoid).stusab)
+        return CensusGeoUrl(str(self), downloader=self.downloader)
 
-        return parse_app_url(us)
+
+    def _mangle_dataframe(self, df):
+        """Manipulate datafames, mostly by creating a geoid index"""
+
+        import geoid.acs
+        from geoid.acs import AcsGeoid
+        from geoid.core import get_class
+
+        cls = get_class(geoid.acs, int(self.summary_level))
+
+        # Transform the geoid to the normal ACS format
+        try:
+            # HACK! The '00US' part will be wrong if the geo file has a component,
+            # but that should only be in the regional files, I think ...
+            df['geoid_index'] = df.GEOID.apply(lambda v: str(cls.parse(str(int(self.summary_level)).zfill(3) + '00US' +
+                                                                     v)))
+            df.set_index('geoid_index', inplace = True)
+        except:
+            # Or dont ...
+            pass
+
+        df.columns = [c.lower() for c in df.columns]
+
+        return df
+
+    def geoframe(self):
+        """Return a geoframe, with some modifications from the shapefile version. """
+        return self.geo_url.geoframe()
+
+    def dataframe(self):
+        return self._mangle_dataframe(super().dataframe())
 
     @property
     def table(self):
@@ -88,3 +101,39 @@ class CensusFileUrl(CensusUrl):
         raise NotImplementedError()
 
 CensusFile = CensusFileUrl
+
+class CensusGeoUrl(CensusFileUrl):
+    """ Defines a URL for a geographic shape file, of the form:
+
+           censusgeo://<year>/<release/<geoid>/<summarylevel>
+
+    """
+    def __init__(self, url=None, downloader=None, **kwargs):
+
+        super().__init__(url, downloader, **kwargs)
+
+        self.scheme = 'censusgeo'
+
+    @classmethod
+    def _match(cls, url, **kwargs):
+        return url.scheme == 'censusgeo'
+
+    @property
+    def shape_url(self):
+        """Return the shapefile URL"""
+        from geoid.acs import AcsGeoid
+
+        us = tiger_url(self.year, self.summary_level, AcsGeoid.parse(self.geoid).stusab)
+
+        return parse_app_url(us)
+
+    def get_resource(self):
+        return self.shape_url.get_resource()
+
+    def geoframe(self):
+        """Return a geoframe, with some modifications from the shapefile version. """
+        gf = self.get_resource().get_target().generator.geoframe()
+        return self._mangle_dataframe(gf)
+
+    def dataframe(self):
+        raise NotImplementedError()

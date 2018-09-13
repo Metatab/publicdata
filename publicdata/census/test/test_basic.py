@@ -42,5 +42,22 @@ class TestBasic(unittest.TestCase):
             gdf = df.geoframe
             print(gdf.iloc[0].geometry.envelope)
 
+    def test_RowGenerator(self):
+        import warnings
+        warnings.simplefilter("ignore")
+
+        from rowgenerators import RowGenerator
+
+        rg = RowGenerator('census://CA/140/B17001')
+
+        self.assertEqual(8058, len(list(rg)))
+
+        df = rg.dataframe()
+
+        self.assertEqual(8057, len(df))
+
+
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -97,4 +97,5 @@ jspm_packages
 _metapack
 
 .DS_Store
+.ipynb_checkpoints
 

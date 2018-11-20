@@ -19,7 +19,7 @@ class TestBasic(unittest.TestCase):
 
             print("Class: ", cls)
 
-            url = cls(**args, downloader = Downloader())
+            url = cls(**args, downloader = Downloader.get_instance())
 
             self.assertEqual(245, len(list(url.generator)))
 

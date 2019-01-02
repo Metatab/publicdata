@@ -48,8 +48,16 @@ def ileave(*iters):
 class _CensusFile(object):
 
     def __init__(self, year, release, stusab, summary_level, seq=None):
-        self.year = year
-        self.release = release
+        try:
+            self.year = int(year)
+        except ValueError:
+            self.year = year
+
+        try:
+            self.release = int(release)
+        except ValueError:
+            self.release = release
+
         self.stusab = stusab
         self.summary_level = summary_level
         self.seq = seq
@@ -393,7 +401,7 @@ class CensusSource(Source):
                 'position': c.col_no
             }
 
-    def dataframe(self, limit=None):
+    def dataframe(self, *args, limit=None, **kwargs):
         """
         Return a CensusReporterDataframe
         :param limit: Limit is ignored
@@ -411,6 +419,13 @@ class CensusSource(Source):
         df.release = self.ref.release
 
         return df.replace('.', np.nan).set_index('GEOID')
+
+    def geoframe(self, *args, limit=None, **kwargs):
+        """Return a geoframe for the associated geographic information"""
+        from rowgenerators import geoframe
+
+        return self.ref.geo_url.generator.geoframe(*args, **kwargs)
+
 
 
     def __iter__(self):
@@ -430,6 +445,10 @@ class CensusGeoSource(ShapefileSource):
 
     def __init__(self, ref, cache=None, working_dir=None, **kwargs):
         super().__init__(ref, cache, working_dir, **kwargs)
+
+    def geoframe(self):
+        gdf =  super().geoframe()
+        return self.ref._mangle_dataframe(gdf)
 
 
 

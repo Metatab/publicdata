@@ -16,55 +16,27 @@ def make_cat_map(df, column):
     t = pd.DataFrame( {'codes': df[column].cat.codes, 'values': df[column]} ).drop_duplicates().sort_values('codes')
     return { e.codes:e.values for e in list(t.itertuples())}
 
-def extract_categories(fspath):
-    """
-    Create a Metatab doc with the schema for a CHIS file, including the categorical values.
 
-    :param fspath: Path to the stata file.
-    :return:
-    """
+def convert_to_numbers(df):
+    """Convert all of the categorical values that are entirely numbers to floats. """
 
-    dfs = pd.read_stata(fspath)
-    itr = pd.read_stata(fspath, iterator=True)
+    df = df.copy()
 
-    var_d = itr.variable_labels()
-
-    # We ought to be able to just use the value_labels() method to get value labels, but
-    # there are a lot of variables it doesn't return values for. For those, we'll use
-    # make_cat_map, which analyzes the categorical values directly.
-
-    val_d = {} #itr.value_labels() # Actually it looks like value_labels is often wrong
-
-    doc = mp.MetapackDoc()
-    doc['Root'].get_or_new_term('Root.Title', 'Schema and Value Categories')
-    doc['Root'].get_or_new_term('Root.Source', fspath)
-    sch = doc.new_section('Schema', ['Description', 'Ordered'])
-    tab = sch.new_term('Root.Table', 'adults')
-
-    for col_name in dfs.columns:
-        col = tab.new_child('Column', col_name, description=var_d[col_name])
-
+    for col_name in df.columns:
         try:
-            val_map = val_d[col_name]
-        except KeyError:
-            try:
-                val_map = make_cat_map(dfs, col_name)
-            except AttributeError:
-                # Probably, column is not a category
-                val_map = {}
+            cats = list(df[col_name].cat.categories)
+            [float(e) for e in cats]
+            df[col_name] = df[col_name].astype(float)
 
-        try:
-            if dfs[col_name].cat.ordered:
-                col.new_child('Column.Ordered', 'true')
-        except AttributeError as e:
+        except ValueError:
+            # Categories, but they are not numbers
             pass
 
-        for k, v in val_map.items():
-            col.new_child('Column.Value', k, description=v)
+        except AttributeError:
+            # not a categorical
+            pass
 
-    doc.cleanse() # Creates Modified and Identifier
-
-    return doc
+    return df
 
 
 def table_category_map(doc, table_name):

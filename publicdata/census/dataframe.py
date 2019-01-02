@@ -16,6 +16,7 @@ class CensusDataFrame(pd.DataFrame):
                  table=None, url=None):
 
         if columns is None and schema is not None:
+
             self.title_map = {s['code']: s['code_title'] for s in schema}
             columns = self.title_map.keys()
         else:
@@ -43,8 +44,15 @@ class CensusDataFrame(pd.DataFrame):
     def titles(self):
         """Return a copy that uses titles for column headings"""
 
+        # There is a bug elsewhere that sometimes the columns are uppercase, and sometimes
+        # they are lowercase.
+
+        m = dict( list(self.title_map.items()) +
+                  [ (k.lower(), v) for k,v in self.title_map.items()])
+
+
         return self.rename(index=str,
-                           columns=self.title_map,
+                           columns=m,
                            inplace=False)
 
     def search_columns(self, *args):

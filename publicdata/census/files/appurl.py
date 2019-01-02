@@ -62,9 +62,9 @@ class CensusFileUrl(CensusUrl):
         try:
             # HACK! The '00US' part will be wrong if the geo file has a component,
             # but that should only be in the regional files, I think ...
-            df['geoid_index'] = df.GEOID.apply(lambda v: str(cls.parse(str(int(self.summary_level)).zfill(3) + '00US' +
+            df['GEOID'] = df.GEOID.apply(lambda v: str(cls.parse(str(int(self.summary_level)).zfill(3) + '00US' +
                                                                      v)))
-            df.set_index('geoid_index', inplace = True)
+            #df.set_index('geoid_index', inplace = True)
         except:
             # Or dont ...
             pass
@@ -78,6 +78,7 @@ class CensusFileUrl(CensusUrl):
         return self.geo_url.geoframe()
 
     def dataframe(self):
+        return super().dataframe()
         return self._mangle_dataframe(super().dataframe())
 
     @property

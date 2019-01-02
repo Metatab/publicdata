@@ -61,12 +61,15 @@ class CensusUrl(Url):
 
         parts_len = len(parts)
 
-        if len(parts) == 3:
+        if len(parts) == 2:
+            # Just the containment region, and summary level,  for geourls.
+            parts = [self.default_year, self.default_release ] + parts + ['B00000']
+
+        elif len(parts) == 3:
             parts = [self.default_year, self.default_release ] + parts
 
-        if len(parts) == 4:
+        elif len(parts) == 4:
             parts =  parts + ['B00000'] # For Geo URL, a non-existent table
-
 
         if len(parts)  != 5:
             raise AppUrlError("Census reporters must have 3 or 5 path components. Got: '{}' ".format(parts))
@@ -84,6 +87,9 @@ class CensusUrl(Url):
 
         self._year, self._release, self._geoid, self._summary_level, self._tableid = parts
 
+
+        self._year = int(self._year)
+        self._release = int(self._release)
 
     def _test_parts(self, parts, raise_exception = False):
         """Check if the URL is formatted properly"""
@@ -183,10 +189,8 @@ class CensusUrl(Url):
 
             messages.append("Failed to parse '{}' ".format(part))
 
-
-
-        year = year or self.default_year
-        release = release or self.default_release
+        year = int(year or self.default_year)
+        release = int(release or self.default_release)
 
         messages += self._test_parts([year, release, geoid, summary_level, tableid])
 

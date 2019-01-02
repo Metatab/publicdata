@@ -56,8 +56,39 @@ class TestBasic(unittest.TestCase):
 
         self.assertEqual(8057, len(df))
 
+    def test_urls(self):
+
+        import rowgenerators as rg
+
+        gdf = rg.geoframe('censusgeo://CA/140')
+        print(gdf.set_index('geoid').head())
 
 
+
+        return
+
+        u = rg.parse_app_url('census://CA/140/B17001')
+        t = u.get_resource().get_target()
+        print(t, t.year, t.release)
+        self.assertEqual('census://CA/140/B17001',str(t))
+        self.assertEqual(2016, t.year)
+        self.assertEqual(5, t.release)
+
+        u = rg.parse_app_url('census://2015/3/CA/140/B17001')
+        t = u.get_resource().get_target()
+        print(t, t.year, t.release)
+        self.assertEqual('census://2015/3/CA/140/B17001', str(t))
+        self.assertEqual(2015, t.year)
+        self.assertEqual(3, t.release)
+
+        gdf = t.geoframe()
+        self.assertEqual(43.083, gdf.area.sum().round(3))
+
+        gdf = rg.geoframe('census://CA/140/B17001')
+        self.assertEqual(43.083, gdf.area.sum().round(3))
+
+        gdf = rg.geoframe('censusgeo://CA/140')
+        self.assertEqual(43.083, gdf.area.sum().round(3))
 
 if __name__ == '__main__':
     unittest.main()

@@ -4,7 +4,7 @@
 """ App Urls and generators for  accessing  static files from census.gov"""
 
 import unittest
-
+from rowgenerators import parse_app_url
 
 class TestIssues(unittest.TestCase):
 
@@ -13,7 +13,6 @@ class TestIssues(unittest.TestCase):
         warnings.simplefilter('ignore')
 
     def test_no_titles(self):
-        from rowgenerators import parse_app_url
 
         u = parse_app_url('census://CA/140/B02001')
 
@@ -32,6 +31,25 @@ class TestIssues(unittest.TestCase):
 
         columns = df.titles.columns
         print(columns)
+
+    def test_2017(self):
+
+        from publicdata.census.files.generators import Table, SequenceFile
+
+        table = Table(2017, 5, 'CA', 140, 'B17001A')
+
+        return
+
+        u = parse_app_url('census://2017/5/CA/140/B17001A')
+
+        print(u.generator)
+
+    def test_header_rows(self):
+
+        u = parse_app_url('census://2016/5/CA/40/B17001A')
+        df = u.dataframe()
+
+        print(df.table.descriptions)
 
 if __name__ == '__main__':
     unittest.main()

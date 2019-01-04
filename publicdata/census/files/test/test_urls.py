@@ -17,7 +17,7 @@ class BasicTests(unittest.TestCase):
         self.assertEqual('DistrictofColumbia', state_name('dc', 2016, 1))
 
     def yield_args_w_state(self):
-        for year in [2014, 2015, 2016]:
+        for year in [2014, 2015, 2016, 2017]:
             for release in [1, 5]:
                 for stusab in ['CA','NH','DC']:
                     for summary_level in [50,140,150]:
@@ -27,7 +27,7 @@ class BasicTests(unittest.TestCase):
 
 
     def yield_args_wo_state(self):
-        for year in [2011,2012,2013,2014, 2015, 2016]:
+        for year in [2011,2012,2013,2014,2015,2016,2017]:
             for release in [1, 5]:
                 for summary_level in [50,140,150]:
                     for seq in [99]:
@@ -35,7 +35,7 @@ class BasicTests(unittest.TestCase):
                                           summary_level=summary_level, seq=seq)
 
     def yield_args_releases(self):
-        for year in [2013,2014, 2015, 2016]:
+        for year in [2013,2014, 2015, 2016, 2017]:
             for release in [1, 5]:
                 for summary_level in [None]:
                     for seq in [None]:
@@ -44,11 +44,8 @@ class BasicTests(unittest.TestCase):
 
     def test_header_archive_url(self):
 
-
         for d in self.yield_args_wo_state():
             url = header_archive_url(**d)
-
-            print(url)
 
             r = requests.head(url)
             self.assertEqual(200,r.status_code,  url)
@@ -58,8 +55,6 @@ class BasicTests(unittest.TestCase):
         for d in self.yield_args_w_state():
             url = seq_archive_url(**d)
 
-            print(url)
-
             r = requests.head(url)
             self.assertEqual(200,r.status_code,  url)
 
@@ -67,8 +62,6 @@ class BasicTests(unittest.TestCase):
 
         for d in self.yield_args_wo_state():
             url = seq_header_url(**d)
-
-            print(url)
 
             r = requests.head(url)
             self.assertEqual(200,r.status_code,  url)

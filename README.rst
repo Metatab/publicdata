@@ -128,6 +128,47 @@ or:
     from publicdata import CensusFileUrl
     rom rowgenerators import Downloader CensusFileUrl(year=2016,release=5,table='B17001',summarylevel='140',geoid='CA', downloader=Downloader())
 
+
+Census Dataframes
+-----------------
+
+For a general overview of the features of the Census URLs, see the `ACS Notebook <https://github.com/Metatab/publicdata/blob/master/notebooks/ACS.ipynb>`_.
+
+The ``.dataframe`` function returns a ``CensusDataFrame`` which has some
+special features for working with Census data, including margin-aware
+summation, ratios, proportions and margin manipulations. See the `Special
+Features of Census Dataframes <https://github.com/Metatab/publicdata/blob/master/notebooks/Special%
+20Features%20of%20Census%20Dataframe.ipynb>`_ notebook for details.
+
+
+
+Census Geography
+---------------------
+
+You can easily get Geopandas ``GeoDataFrame`` objects with either the ``census:`` scheme, or the ``censusgeo:``
+scheme. The geoframe is avilable directly from the Url, or with the ``rowgenerators`` package's ``geoframe()``
+convenience function/
+
+.. code-block:: python
+
+    from rowgenerators import parse_app_url
+    parse_app_url('census://CA/place').geoframe()
+
+    # or
+
+    from rowgenerators import geoframe
+    geoframe('censusgeo://CA/place')
+
+Note that the state ( 'CA' in the examples above ) should be 'US' for  national regions, such as CSA and  CBSA:
+
+.. code-block:: python
+
+    geoframe('censusgeo://US/csa')
+    geoframe('censusgeo://US/cbsa')
+    # but ...
+    geoframe('censusgeo://CA/county')
+
+
 Common Operations
 -----------------
 
@@ -162,17 +203,6 @@ Get a Geopandas dataframe:
 .. code-block:: python
 
     url.geoframe
-
-Census Dataframes
------------------
-
-For a general overview of the features of the Census URLs, see the `ACS Notebook <https://github.com/Metatab/publicdata/blob/master/notebooks/ACS.ipynb>`_.
-
-The ``.dataframe`` property returns a ``CensusDataFrame`` which has some
-special features for working with Census data, including margin-aware
-summation, ratios, proportions and margin manipulations. See the `Special
-Features of Census Dataframes <https://github.com/Metatab/publicdata/blob/master/notebooks/Special%
-20Features%20of%20Census%20Dataframe.ipynb>`_ notebook for details.
 
 
 

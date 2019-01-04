@@ -6,7 +6,7 @@
 """
 
 def sub_geoids(v):
-    """Replace state abbreviations with state and national geoids"""
+    """Replace state abbreviations and state fips codes with state and national geoids"""
 
     from geoid.censusnames import stusab
     from geoid.acs import Us, State, AcsGeoid
@@ -22,6 +22,13 @@ def sub_geoids(v):
 
         if v in stmap:
             return str(State(stmap[v]))
+
+    # Maybe it is a state number
+    try:
+        v = int(v)
+        return str(State(v))
+    except ValueError:
+        pass
 
     return str(AcsGeoid.parse(v))
 

@@ -21,9 +21,10 @@ from functools import lru_cache
 from . import logger
 
 
-# https://gist.github.com/smdabdoub/5213405
+
 @lru_cache(maxsize=100, typed=False)
 def tablemeta(year, release):
+    """Function to cache creation of TableMeta objects"""
     return TableMeta(year, release)
 
 
@@ -42,7 +43,7 @@ def try_number(v):
 
 
 def ileave(*iters):
-    return list(chain(*zip(*iters)))
+    return list(chain(*zip(*iters))) # From https://gist.github.com/smdabdoub/5213405
 
 
 class _CensusFile(object):
@@ -85,20 +86,25 @@ class GeoFile(_CensusFile):
 
 
 class SequenceFile(_CensusFile):
-
+    """Represents a single Sequence file, which holds data for a single state and may contain
+    multiple tables"""
+    
     def __init__(self, year, release, stusab, summary_level, seq):
 
         assert seq is not None
 
         super().__init__(year, release, stusab, summary_level, seq)
 
+        # Url to the estimates
         self.est_url = seq_estimate_url(self.year, self.release, self.stusab, self.summary_level, self.seq)
+        # Url to the margins
         self.margin_url = seq_margin_url(self.year, self.release, self.stusab, self.summary_level, self.seq)
-        self.headerurl = seq_header_url(self.year, self.release, self.stusab, self.summary_level, self.seq)
+        # Url to the file header, which includes fancy descriptions
+        self.header_url = seq_header_url(self.year, self.release, self.stusab, self.summary_level, self.seq)
 
         self.table_meta = tablemeta(self.year, self.release)
 
-        self._file_headers, _descriptions = list(parse_app_url(self.headerurl).generator)
+        self._file_headers, _descriptions = list(parse_app_url(self.header_url).generator)
 
         # At least some of the fields have '%' as a seperator
         self._descriptions =  [ c.replace('%',' -') for c in _descriptions]
@@ -130,10 +136,14 @@ class SequenceFile(_CensusFile):
 
         columns = []
 
+        # Get column entries for the first 6 columns in the file, which are
+        # support data, not estimates or margins. These are fake columns,
+        # so they don't have a table id.
         for i, c in enumerate(self._file_headers[:6]):
-            c = Column(None, c, i, description=c, short_desc=c, seq_file_col_no=i)
+            c = Column(None, None, c, i, description=c, short_desc=c, seq_file_col_no=i)
             columns.append(c)
 
+        # The remainder of the columns come from the metadata, and do have an associated table.
         for k, v in self.table_meta.tables.items():
             if int(v.seq) == self.seq:
                 for k in sorted(v.columns):
@@ -157,12 +167,20 @@ class SequenceFile(_CensusFile):
 
 
 class Table(_CensusFile):
-    """Iterator for a single table in a single segment file"""
+    """Iterator for a single table in a single segment file
+
+    This table is distinguished from meta.table in that this table is attached to a sequence,
+    and the Sequence files have Sequence headers, which have the long descriptions. These descriptions for
+    columns are fully-qualified paths in the hierarchy, so they can be parsed for race, sex and age information
+    """
     geo_headers = tuple('LOGRECNO GEOID SUMLEVEL STUSAB COUNTY NAME COMPONENT'.split())
 
     sl_col_pos = geo_headers.index('SUMLEVEL')
 
     def __init__(self, year, release, stusab, summary_level, tableid):
+
+        ## HACK! This initializer will download files. It should not
+
         from geoid.censusnames import stusab as state_name_map
 
         super().__init__(year, release, stusab, summary_level, seq=None)
@@ -192,26 +210,28 @@ class Table(_CensusFile):
         self.state_abs = list(state_name_map.values()) if self.stusab.upper() == 'US' else [self.stusab]
 
         # First sequence file
-        sequence_file = SequenceFile(self.year, self.release, self.state_abs[0],
+        self.sequence_file = SequenceFile(self.year, self.release, self.state_abs[0],
                                      self.summary_level, self.seq)
 
         # Get the column names that we will be extracting from the segment
 
         self._columns = []
 
-        for c in sequence_file.meta:
+        for c in self.sequence_file.meta:
             if c.table_id and c.table_id.lower() == tableid.lower():
                 self._columns.append(c)
 
-        self.lr_pos = sequence_file.file_headers.index('LOGRECNO')
+        self.lr_pos = self.sequence_file.file_headers.index('LOGRECNO')
 
         self.col_positions = [c.seq_file_col_no for c in self._columns]
         self.ig = itemgetter(*self.col_positions)
 
         geo = self.geo()
 
-        self.file_headers = geo['LOGRECNO'][0] + self.ig(sequence_file.file_headers)
-        self.descriptions = geo['LOGRECNO'][0] + self.ig(sequence_file.descriptions)
+        self.file_headers = geo['LOGRECNO'][0] + self.ig(self.sequence_file.file_headers)
+        self.descriptions = geo['LOGRECNO'][0] + self.ig(self.sequence_file.descriptions)
+
+
 
     @lru_cache()
     def geo(self, stusab=None):
@@ -253,13 +273,18 @@ class Table(_CensusFile):
         # Geez, what a mess ...
         short_descriptions_map = { c.unique_id:c.description for c in self.table.columns.values() }
 
-        for i, (f, d, c) in enumerate(zip(self.file_headers, self.descriptions, cols)):
+        for i, (f, ld, c) in enumerate(zip(self.file_headers, self.descriptions, cols)):
 
             if c is None:
-                c = Column(None, f, i, d, f, )
+                # Column(table, table_id, col_id, col_no, description=None, short_desc=None, seq_file_col_no=None):
+                c = Column(self.table, self.tableid, f, i, ld, f )
 
-            c.col_no = i
-            c.description = d
+            c.col_no = i # Why are we assigning this again? It was set in the initializer
+            c.long_description = ld
+
+            # Long description includes the table title
+            c.description = ' - '.join(c.long_description.split(' - ')[1:])
+
             c.short_description = short_descriptions_map.get(c.unique_id)
 
             yield c

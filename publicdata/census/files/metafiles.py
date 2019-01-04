@@ -3,8 +3,84 @@
 
 
 """Classes to acess metadata files"""
-from publicdata.census.files.url_templates import table_shell_url, table_lookup_url
+from publicdata.census.files.url_templates import table_shell_url, table_lookup_url, seq_estimate_url, seq_margin_url, \
+    seq_header_url, geo_header_url, geo_url
+
 from rowgenerators import parse_app_url
+
+
+def make_col_map(t):
+    """Create a dist that maps column names to sex/age/pov dimensions"""
+    from collections import namedtuple
+    import pandas as pd
+
+    sex = None
+    age = None
+    pov = 'all'
+
+    def parse_age(v):
+
+        if v is None:
+            return None
+
+        elif v and 'year' in v:
+            parts = v.split()
+
+            if parts[0] == '75':
+                return pd.Interval(left=75, right=120, closed='both')
+            elif parts[0] == '5':
+                return pd.Interval(left=5, right=5, closed='both')
+            elif parts[0] == '15':
+                return pd.Interval(left=15, right=15, closed='both')
+            elif parts[0] == 'Under':
+                return pd.Interval(left=0, right=4, closed='both')
+            elif len(parts) == 4:
+                return pd.Interval(left=int(parts[0]), right=int(parts[2]), closed='both')
+            else:
+                raise ValueError("Can't parse age string: {}".format(v))
+        else:
+            return pd.Interval(left=0, right=120, closed='both')
+
+    col_map = {}
+
+    Dimensions = namedtuple('Dimensions', ['sex', 'age_range', 'pov'])
+
+    for e in t.table.columns:
+
+        sd = e.short_description.lower()
+        if '_m90' in e.unique_id:
+            continue
+        if sd:
+            if 'male' in sd:
+                sex = 'male'
+            elif 'female' in sd:
+                sex = 'female'
+            elif 'total' in sd:
+                sex = 'both'
+            elif 'below poverty level' in sd:
+                pov = 'below'
+            elif 'above poverty level' in sd:
+                pov = 'above'
+
+        col_map[e.unique_id] = Dimensions(sex, parse_age(sd), pov)
+
+    return col_map
+
+race_iterations = [
+        ('A', 'white',   'White'),
+        ('B', 'black',   'Black or African American'),
+        ('C', 'aian',    'American Indian and Alaska Native'),
+        ('D', 'asian',   'Asian'),
+        ('E', 'nhopi',   'Native Hawaiian and Other Pacific Islander'),
+        ('F', 'other',   'Some Other Race'),
+        ('G', 'many',    'Two or More Races'),
+        ('H', 'nhwhite', 'White Alone, Not Hispanic or Latino'),
+        ('N', 'nhisp',   'Not Hispanic or Latino'),
+        ('I', 'hisp',    'Hispanic or Latino'),
+        ('C', 'aian',    'American Indian'),
+        (None, 'all',    'All races')]
+
+ri_code_map = { code.lower():race for code, race, term in race_iterations if code}
 
 
 class Table(object):
@@ -17,6 +93,8 @@ class Table(object):
         self.title = title
         self.universe = universe
         self.releases = set()
+
+
 
         self.seq = seq
         self.fileid = fileid
@@ -35,6 +113,14 @@ class Table(object):
             self.universe,
             self.subject
         ]
+
+
+    @property
+    def race(self):
+        """Return a race code from the table id"""
+
+        return ri_code_map.get(self.unique_id[-1].lower)
+
 
     def _repr_html_(self, **kwargs):
 
@@ -58,11 +144,13 @@ class Column(object):
     """Represents a column in a Census Table"""
     csv_header = 'tableid id colno desc short_desc'.split()
 
-    def __init__(self, table_id, col_id, col_no, description=None, short_desc=None, seq_file_col_no=None):
+    def __init__(self, table, table_id, col_id, col_no, description=None, short_desc=None, seq_file_col_no=None):
+        self.table = table
         self.table_id = table_id
         self.unique_id = col_id
         self.description = description
         self.short_description = short_desc
+        self.long_description = short_desc
         self.col_no = col_no
         self.seq_file_col_no = seq_file_col_no
 
@@ -74,12 +162,125 @@ class Column(object):
             self.col_no,
             self.seq_file_col_no,
             self.description,
-            self.short_description
+            self.short_description,
+            self.long_description,
         ]
 
 
+    @property
+    def sex(self):
+        v = self.description.lower()
+
+        if 'male' in v:
+            return 'male'
+        elif 'female' in v:
+            return 'female'
+        else:
+            return 'both'
+
+    @property
+    def race(self):
+
+        race_from_table = ri_code_map.get(self.table_id[-1].lower())
+
+        if race_from_table and race_from_table != 'all':
+            return race_from_table
+
+        # Special case for a specific table, C02003
+        if 'two or more races' in self.long_description:
+            return 'many'
+
+        v = self.description.lower()
+
+        for code, race, term in race_iterations:
+            if term.lower() in v.lower():
+                return race
+
+        # Maybe there is more race information in the table title, but
+        # it isn't an iteration, like:
+        # b02015: Asian Alone By Selected Groups
+
+        v = self.long_description.lower()
+
+        for code, race, term in race_iterations:
+            if term.lower() in v.lower():
+                return race
+
+        return 'all'
+
+    @property
+    def age_range(self):
+        """Parse the description fo an age range"""
+        import re
+
+        v = self.description.lower()
+
+        pats = {
+            'ago': re.compile("1 year ago"),
+            'to':re.compile("(?P<lower>\d+) to (?P<upper>\d+) years"),
+            'and':re.compile("(?P<lower>\d+) and (?P<upper>\d+) years"),
+            'under':re.compile("under (?P<upper>\d+) years"),
+            'over': re.compile("(?P<lower>\d+) years and over"),
+            'single':re.compile("(?P<upperlower>\d+) years"),
+
+        }
+
+        if v is None:
+            return None
+
+        elif v and 'year' in v:
+
+            m = pats['ago'].search(v)
+            if m:
+                # This phrase will screw up age matching
+                v = v.replace('1 year ago', '')
+
+
+            m = pats['to'].search(v)
+            if m:
+                return (int(m.group('lower')), int(m.group('upper')))
+
+            m = pats['and'].search(v)
+            if m:
+                return (int(m.group('lower')), int(m.group('upper')))
+
+            m = pats['under'].search(v)
+            if m:
+                return (0, int(m.group('upper')))
+
+            m = pats['over'].search(v)
+            if m:
+                return (int(m.group('lower')), 120)
+
+            m = pats['single'].search(v)
+            if m:
+                return (int(m.group('upperlower')), int(m.group('upperlower')))
+
+        return None
+
+    @property
+    def age(self):
+        ar = self.age_range
+        if ar:
+            return "{:03d}-{:03d}".format(*ar)
+        else:
+            return 'all'
+
+
 class TableShell(object):
-    """Collection of tables and columns"""
+    """Access object for table shell files.
+
+    The Shell Files, such as:
+
+        https://www2.census.gov/programs-surveys/acs/summary_file/2016/documentation/user_tools/ACS2016_Table_Shells.xlsx
+
+    The Shell files have information about each table and columns, including:
+        * Table Id
+        * Data column line number in the table
+        * Column title ( called "Stub" )
+        * Which release the column is available in
+
+    """
 
     def __init__(self, year, release):
         url_s = table_shell_url(year=year, release=release, stusab=None, summary_level=None, seq=None)
@@ -111,16 +312,23 @@ class TableShell(object):
 
             else:  # column row
 
-                line_no = int(row['Line'])
+                try:
+                    line_no = int(row['Line'])
 
-                if not line_no in tables[table_id_key].columns:
-                    startpos = tables[table_id_key].startpos or 0
-
-                    tables[table_id_key].columns[line_no] = Column(row[0], row['UniqueID'], line_no,
-                                                                   short_desc=row['Stub'],
-                                                                   seq_file_col_no=line_no+startpos)
+                except ValueError:
+                    # Probably, the line number  is a float, which indicates a header line. Header lines don't have
+                    # estimates associated with them, so we exclude them.
+                    pass
                 else:
-                    tables[table_id_key].columns[line_no].short_desc = row['Stub']
+
+                    if not line_no in tables[table_id_key].columns:
+                        startpos = tables[table_id_key].startpos or 0
+
+                        tables[table_id_key].columns[line_no] = Column(row[0], row['UniqueID'], line_no,
+                                                                       short_desc=row['Stub'],
+                                                                       seq_file_col_no=line_no+startpos)
+                    else:
+                        tables[table_id_key].columns[line_no].short_desc = row['Stub']
 
         self._tables = tables
 
@@ -136,12 +344,27 @@ class TableShell(object):
         return self._tables
 
 class TableLookup(object):
+    """Access object for the TableLookup files.
+
+    The Lookup files, such as:
+
+        https://www2.census.gov/programs-surveys/acs/summary_file/2017/documentation/user_tools/ACS_5yr_Seq_Table_Number_Lookup.txt
+
+    have information about each table and column, including:
+        * Table Number
+        * Column Line
+        * Table start position in sequence file
+        * Total cells in table and sequence
+        * Short column title
+
+    """
 
     def __init__(self, year, release):
 
         from rowgenerators.appurl.file import CsvFileUrl
 
         url_s = table_lookup_url(year=year, release=release, stusab=None, summary_level=None, seq=None)
+
 
         url = str(parse_app_url(url_s).get_resource().get_target())
 
@@ -181,7 +404,7 @@ class TableLookup(object):
                     line_no = int(row['Line Number'])
 
                     if not line_no in tables[table_id_key].columns:
-                        tables[table_id_key].columns[line_no] = Column(row['Table ID'],
+                        tables[table_id_key].columns[line_no] = Column(tables[table_id_key], row['Table ID'],
                                                                           f"{row['Table ID']}_{line_no:03}",
                                                                           line_no,
                                                                           description=row['Table Title'])
@@ -209,11 +432,9 @@ class TableLookup(object):
 
 
 class TableMeta(object):
-    """Combines the lookup and  shell objects"""
+    """Combines the lookup and  shell objects, but mostly just uses the TableLookup"""
 
     def __init__(self, year, release):
-
-        from rowgenerators.appurl.file import CsvFileUrl
 
         self.year = year
         self.release = release
@@ -227,9 +448,6 @@ class TableMeta(object):
 
         if self._tables:
             return self._tables
-
-        #self.ts = TableShell(self.year, self.release)
-        #self._tables = self.ts._process()
 
         self._tables = {}
 
@@ -249,7 +467,7 @@ class TableMeta(object):
 
     @property
     def summary_levels(self):
-        """Return a dict of summary level names, numebrs and descriptions"""
+        """Return a dict of summary level names, numbers and descriptions"""
         from geoid.core import names, descriptions
 
         sl = {}

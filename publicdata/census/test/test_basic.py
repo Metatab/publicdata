@@ -1,13 +1,12 @@
-import unittest
+from publicdata.test import TestCase
 from rowgenerators import parse_app_url, Downloader
 
-class TestBasic(unittest.TestCase):
+
+class TestBasic(TestCase):
 
 
     def test_basic(self):
 
-        import warnings # Must turn off warnings in the test function
-        warnings.simplefilter("ignore")
 
         from publicdata import CensusFileUrl, CensusReporterUrl
 
@@ -23,7 +22,7 @@ class TestBasic(unittest.TestCase):
 
             self.assertEqual(245, len(list(url.generator)))
 
-            df = url.dataframe
+            df = url.dataframe()
 
             print("Type", type(df))
 
@@ -33,13 +32,13 @@ class TestBasic(unittest.TestCase):
 
             print('Geo Generator', url.geo_generator)
 
-            gdf = url.geoframe
+            gdf = url.geoframe()
 
             #print(gdf.head())
 
             print(gdf.iloc[0].geometry.envelope)
 
-            gdf = df.geoframe
+            gdf = df.geoframe()
             print(gdf.iloc[0].geometry.envelope)
 
     def test_RowGenerator(self):

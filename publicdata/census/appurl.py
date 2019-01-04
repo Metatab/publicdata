@@ -44,7 +44,7 @@ class CensusUrl(Url):
 
             if len(parts) == 3:
                 url = "{}://{}/{}/{}".format(self.proto, *parts )
-            if len(parts) == 4: # Form for censusgeo urls
+            elif len(parts) == 4: # Form for censusgeo urls
                 url = "{}://{}/{}/{}/{}".format(self.proto, *parts )
             else:
                 url = "{}:/{}/{}/{}/{}/{}".format(self.proto, *parts)

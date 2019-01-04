@@ -47,7 +47,6 @@ states = [(2, 'AK', 'Alaska'), (1, 'AL', 'Alabama'), (4, 'AZ', 'Arizona'), (5, '
 header_template = acs_data_base_url + '/{year}_{release}yr_Summary_FileTemplates.zip'
 
 
-seq_header_resource_template = 'Seq{seq}.xls'
 
 geo_header_resource_template = '{year}_SFGeoFileTemplate.xls'
 
@@ -61,7 +60,13 @@ def header_archive_url(year, release, stusab, summary_level, seq=None):
 
 def seq_header_url(year, release, stusab, summary_level, seq=None):
     """Return the URL to the summary file header, possibly within an  archive file"""
+
     hau =  header_archive_url(year, release, summary_level, seq)
+
+    if year < 2017:
+        seq_header_resource_template = 'Seq{seq}.xls'
+    else:
+        seq_header_resource_template = 'seq{seq}.xls'
 
     return hau+'#'+seq_header_resource_template.format(seq=seq)
 
@@ -226,12 +231,12 @@ def tiger_url(year, summary_level, stusab=None):
     except ValueError:
         sl_u = summary_level.upper()
 
-
+    # Example:
     # ftp://ftp2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_15_tract.zip
 
     base =  f'shape+ftp://ftp2.census.gov/geo/tiger/TIGER{year}/{sl.upper()}'
 
-    if sl=='COUNTY':
+    if sl in ('COUNTY', 'CBSA', 'CSA'):
         return base+f'/tl_{year}_us_{sl.lower()}.zip'
     else:
         return base+f'/tl_{year}_{state:02}_{sl.lower()}.zip'

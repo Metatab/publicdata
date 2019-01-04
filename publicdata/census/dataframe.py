@@ -15,6 +15,7 @@ class CensusDataFrame(pd.DataFrame):
     def __init__(self, data=None, index=None, columns=None, dtype=None, copy=False, schema=None,
                  table=None, url=None):
 
+
         if columns is None and schema is not None:
 
             self.title_map = {s['code']: s['code_title'] for s in schema}

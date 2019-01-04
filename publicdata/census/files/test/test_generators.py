@@ -237,6 +237,73 @@ class TestGenerators(unittest.TestCase):
         self.assertEqual(244, len(u.geoframe().geometry))
 
 
+    def test_age_dimensions(self):
+
+        '''Check that there are not tables with 'year' in the title that don't get a parsed age range'''
+
+        tm = TableMeta(2016, 5)
+
+        age_tables = []
+        for t_id, table in tm.tables.items():
+            if 'by age' in table.title.lower():
+                age_tables.append(t_id)
+
+        for at in age_tables:
+            u = parse_app_url('census://2016/5/RI/40/{}'.format(at.lower()))
+            g = u.generator
+            t = g.table
+
+            parse_errors = []
+
+            for c in t.columns:
+                if '_m90' not in c.unique_id and 'year' in c.description and not c.age_range and '1 year ago' not in \
+                        c.description:
+                    parse_errors.append(c)
+
+            self.assertEqual(0, len(parse_errors))
+
+    def test_race_dimensions(self):
+
+        table_ids = ['B03002','C02003', 'B02017']
+
+        table_ids = ['b02008', 'b02010', 'b02015']
+
+
+        for t_id in table_ids:
+            u = parse_app_url('census://2016/5/RI/40/{}'.format(t_id.lower()))
+            g = u.generator
+            t = g.table
+            print('---- ', t.table.title)
+            for i, c in enumerate(t.columns):
+                if '_m90' not in c.unique_id and i > 3:
+                    row = [c.unique_id, c.sex, c.race, c.age, c.description]
+                    print(row)
+
+                if i > 30:
+                    break
+
+    def test_dimensions(self):
+        tm = TableMeta(2016, 5)
+
+        with open('/tmp/dimensions.csv', 'w') as f:
+            w = csv.writer(f)
+
+            w.writerow("".split())
+
+            for t_id, table in tm.tables.items():
+                u = parse_app_url('census://2016/5/RI/40/{}'.format(t_id.lower()))
+                g = u.generator
+                t = g.table
+
+                w.writerow([t_id, table.title])
+                for i, c in enumerate(t.columns):
+                    if '_m90' not in c.unique_id and i > 3:
+                        row = [c.unique_id, c.sex, c.race, c.age, c.description]
+                        print(row)
+                        w.writerow(row)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

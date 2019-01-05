@@ -51,5 +51,45 @@ class TestIssues(unittest.TestCase):
 
         print(df.table.descriptions)
 
+    def test_split_tables(self):
+
+        # Table b24121 Detailed Occupation by Median Earnings for the Full-time, Year-round Civilian Population is split
+        # across multiple segments.
+        from publicdata.census.files.generators import Table, TableMeta, SequenceFile
+        from publicdata.census.files.metafiles import TableLookup
+        from itertools import islice
+
+        sequence_file = SequenceFile(2017, 5, 'RI', 50, 85)
+        print(sequence_file.header_url)
+        print(len(list(sequence_file.columns)))
+
+        for c in list(sequence_file.columns)[:10]:
+            print(c.row)
+
+        sequence_file = SequenceFile(2017, 5, 'RI', 50, 86)
+        print(len(list(sequence_file.columns)))
+
+        sequence_file = SequenceFile(2017, 5, 'RI', 50, 87)
+        print(len(list(sequence_file.columns)))
+        print(sequence_file.est_url)
+
+        print('\n'.join(str(e) for e in list(islice(sequence_file, 10))))
+
+        meta = TableMeta(2017, 5)
+
+        print(len(meta.tables['b24121'].columns))
+
+        tl = TableLookup(2017, 5)
+        print (tl.url)
+
+        table = Table(2017, 5, 'RI', 40, 'B24121')
+
+        self.assertEqual(1056, (len(list(table.file_headers))))
+        self.assertEqual(1056, len(list(table.columns)))
+
+        from rowgenerators import dataframe
+        df = dataframe('census://2016/5/RI/40/B24121')
+
+
 if __name__ == '__main__':
     unittest.main()

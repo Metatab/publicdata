@@ -9,63 +9,6 @@ from publicdata.census.files.url_templates import table_shell_url, table_lookup_
 from rowgenerators import parse_app_url
 
 
-def make_col_map(t):
-    """Create a dist that maps column names to sex/age/pov dimensions"""
-    from collections import namedtuple
-    import pandas as pd
-
-    sex = None
-    age = None
-    pov = 'all'
-
-    def parse_age(v):
-
-        if v is None:
-            return None
-
-        elif v and 'year' in v:
-            parts = v.split()
-
-            if parts[0] == '75':
-                return pd.Interval(left=75, right=120, closed='both')
-            elif parts[0] == '5':
-                return pd.Interval(left=5, right=5, closed='both')
-            elif parts[0] == '15':
-                return pd.Interval(left=15, right=15, closed='both')
-            elif parts[0] == 'Under':
-                return pd.Interval(left=0, right=4, closed='both')
-            elif len(parts) == 4:
-                return pd.Interval(left=int(parts[0]), right=int(parts[2]), closed='both')
-            else:
-                raise ValueError("Can't parse age string: {}".format(v))
-        else:
-            return pd.Interval(left=0, right=120, closed='both')
-
-    col_map = {}
-
-    Dimensions = namedtuple('Dimensions', ['sex', 'age_range', 'pov'])
-
-    for e in t.table.columns:
-
-        sd = e.short_description.lower()
-        if '_m90' in e.unique_id:
-            continue
-        if sd:
-            if 'male' in sd:
-                sex = 'male'
-            elif 'female' in sd:
-                sex = 'female'
-            elif 'total' in sd:
-                sex = 'both'
-            elif 'below poverty level' in sd:
-                pov = 'below'
-            elif 'above poverty level' in sd:
-                pov = 'above'
-
-        col_map[e.unique_id] = Dimensions(sex, parse_age(sd), pov)
-
-    return col_map
-
 race_iterations = [
         ('A', 'white',   'White'),
         ('B', 'black',   'Black or African American'),
@@ -94,7 +37,7 @@ class Table(object):
         self.universe = universe
         self.releases = set()
 
-
+        self.number_of_segments = 1 # > 1 for multi-segment tables, like b24010 or b24121
 
         self.seq = seq
         self.fileid = fileid
@@ -216,7 +159,6 @@ class Column(object):
         v = self.description.lower()
 
         pats = {
-            'ago': re.compile("1 year ago"),
             'to':re.compile("(?P<lower>\d+) to (?P<upper>\d+) years"),
             'and':re.compile("(?P<lower>\d+) and (?P<upper>\d+) years"),
             'under':re.compile("under (?P<upper>\d+) years"),
@@ -225,16 +167,9 @@ class Column(object):
 
         }
 
-        if v is None:
-            return None
+        if v and 'year' in v:
 
-        elif v and 'year' in v:
-
-            m = pats['ago'].search(v)
-            if m:
-                # This phrase will screw up age matching
-                v = v.replace('1 year ago', '')
-
+            v = v.replace('1 year ago', '').replace('year-round','')
 
             m = pats['to'].search(v)
             if m:
@@ -265,6 +200,33 @@ class Column(object):
             return "{:03d}-{:03d}".format(*ar)
         else:
             return 'all'
+
+
+    @property
+    def poverty_status(self):
+
+        v = self.long_description.lower()
+
+        pov_map = {
+            'under 1.00':              'lt100',
+            'below 100 percent of the poverty level': 'lt100',
+            'below poverty level':     'lt100',
+            'below the poverty level': 'lt100',
+            'above poverty level':     'gt100',
+            'above the poverty level': 'gt100',
+            '100 to 149 percent of the poverty level': '100-150',
+            'at or above 150 percent of the poverty level': 'gt150',
+            '1.00 to 1.99':           '100-200',
+            '2.0  and over':          'gt200'
+        }
+
+        for term, code in pov_map.items():
+            if term in v:
+                return code
+
+        return None
+
+
 
 
 class TableShell(object):
@@ -324,7 +286,7 @@ class TableShell(object):
                     if not line_no in tables[table_id_key].columns:
                         startpos = tables[table_id_key].startpos or 0
 
-                        tables[table_id_key].columns[line_no] = Column(row[0], row['UniqueID'], line_no,
+                        tables[table_id_key].columns[line_no] = Column(None, row[0], row['UniqueID'], line_no,
                                                                        short_desc=row['Stub'],
                                                                        seq_file_col_no=line_no+startpos)
                     else:
@@ -361,39 +323,45 @@ class TableLookup(object):
 
     def __init__(self, year, release):
 
-        from rowgenerators.appurl.file import CsvFileUrl
 
-        url_s = table_lookup_url(year=year, release=release, stusab=None, summary_level=None, seq=None)
-
-
-        url = str(parse_app_url(url_s).get_resource().get_target())
-
-        self.url = CsvFileUrl(url, encoding='latin1')
+        self.url = table_lookup_url(year=year, release=release, stusab=None, summary_level=None, seq=None)
 
         self._tables = None
 
     def _process(self, tables=None):
         """Build the local data structure from the source data structure"""
 
+        from rowgenerators.appurl.file import CsvFileUrl
+
         if self._tables:
             return self._tables
 
         tables = tables or {}
 
-        for row in self.url.generator.iter_rp:
+        url = str(parse_app_url(self.url).get_resource().get_target())
+
+        csv_url = CsvFileUrl(url, encoding='latin1')
+
+        for row in csv_url.generator.iter_rp:
 
             table_id_key = row['Table ID'].strip().lower()
 
-            if not row['Line Number'].strip():
+            if not row['Line Number'].strip(): # Either the table title, or the Universe row
+                
                 if 'Universe' not in row['Table Title']:
                     if table_id_key not in tables:
                         tables[table_id_key] = Table(row['Table ID'], row['Table Title'].strip().title(),
-                                                        seq=row['Sequence Number'],
-                                                        startpos=int(row['Start Position']))
+                                                        seq=[int(row['Sequence Number'])],
+                                                        startpos=int(row['Start Position']),
+                                                        subject=row['Subject Area'])
                     else:
-                        tables[table_id_key].seq = row['Sequence Number']
-                        tables[table_id_key].startpos = row['Start Position']
-                        tables[table_id_key].subject = row['Subject Area']
+                        # This case is for muli-segment tables
+                        assert(int(row['Start Position']) == 7) # Should always start at the beginning of the segment
+
+                        tables[table_id_key].seq.append(int(row['Sequence Number']))
+
+                        tables[table_id_key].number_of_segments += 1
+
 
                 else:
                     tables[table_id_key].universe = row['Table Title'].replace('Universe: ', '').strip()

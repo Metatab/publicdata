@@ -97,16 +97,22 @@ class SequenceFile(_CensusFile):
 
         # Url to the estimates
         self.est_url = seq_estimate_url(self.year, self.release, self.stusab, self.summary_level, self.seq)
+
         # Url to the margins
         self.margin_url = seq_margin_url(self.year, self.release, self.stusab, self.summary_level, self.seq)
+
         # Url to the file header, which includes fancy descriptions
+        # The file is a 2-row Excel file, intended to be used as the headers
+        # for the data files. The first row is the column ids, and the second is
+        # the titles. The first 6 columns are for STUSAB, SEQUENCE, LOGRECNO, etc,
+        # so they are cut off.
         self.header_url = seq_header_url(self.year, self.release, self.stusab, self.summary_level, self.seq)
 
-        self.table_meta = tablemeta(self.year, self.release)
-
+        # There are only two rows in the file, the first is the file headers ( column IDs )
+        # and the second is longer descriptions
         self._file_headers, _descriptions = list(parse_app_url(self.header_url).generator)
 
-        # At least some of the fields have '%' as a seperator
+        # At least some of the fields have '%' as a seperator instead of ' - '
         self._descriptions =  [ c.replace('%',' -') for c in _descriptions]
 
     @property
@@ -120,45 +126,27 @@ class SequenceFile(_CensusFile):
     @property
     def descriptions(self):
 
-        # The descriptions is a 2-row Excel file, intended to be used as the headers
-        # for the data files. The first row is the colum ids, and the second is
-        # the titles. The first 6 columns are for STUSAB, SEQUENCE, LOGRECNO, etc,
-        # so they are cut off.
-
         est_headers = self._descriptions[6:]
         margin_headers = ['' for e in est_headers]
 
         return self._descriptions[:6] + ileave(est_headers, margin_headers)
 
     @property
-    def meta(self):
+    def columns(self):
         from .metafiles import Column
 
-        columns = []
 
-        # Get column entries for the first 6 columns in the file, which are
-        # support data, not estimates or margins. These are fake columns,
-        # so they don't have a table id.
-        for i, c in enumerate(self._file_headers[:6]):
-            c = Column(None, None, c, i, description=c, short_desc=c, seq_file_col_no=i)
-            columns.append(c)
+        for i, c in enumerate(self.file_headers):
 
-        # The remainder of the columns come from the metadata, and do have an associated table.
-        for k, v in self.table_meta.tables.items():
-            if int(v.seq) == self.seq:
-                for k in sorted(v.columns):
-                    c = copy(v.columns[k])
-                    c.seq_file_col_no = columns[-1].seq_file_col_no + 1
-                    columns.append(c)
+            try:
+                table_id, col_number = c.replace('_m90','').split('_')
+            except ValueError:
+                table_id = None
 
-                    c = copy(v.columns[k])
-                    c.unique_id = c.unique_id + '_m90'
-                    c.seq_file_col_no = columns[-1].seq_file_col_no + 1
-                    columns.append(c)
-
-        return columns
+            yield Column(None, table_id, c, i, description=c, short_desc=c, seq_file_col_no=i)
 
     def __iter__(self):
+        """Iterate the estimates and margins, interleaved"""
 
         yield self.file_headers
 
@@ -205,33 +193,55 @@ class Table(_CensusFile):
 
             raise SourceError(f"Table metadata does not include table '{self.tableid}' " + other_msg)
 
-        self.seq = int(self.table.seq)
-
         self.state_abs = list(state_name_map.values()) if self.stusab.upper() == 'US' else [self.stusab]
 
-        # First sequence file
-        self.sequence_file = SequenceFile(self.year, self.release, self.state_abs[0],
-                                     self.summary_level, self.seq)
+        self.item_getters = []
+
+        self.lr_pos = None
+
+        self._collect_sequences()
+
+    def _collect_sequences(self):
+        """Build per-sequence item getters, file headers and descriptions"""
 
         # Get the column names that we will be extracting from the segment
 
-        self._columns = []
-
-        for c in self.sequence_file.meta:
-            if c.table_id and c.table_id.lower() == tableid.lower():
-                self._columns.append(c)
-
-        self.lr_pos = self.sequence_file.file_headers.index('LOGRECNO')
-
-        self.col_positions = [c.seq_file_col_no for c in self._columns]
-        self.ig = itemgetter(*self.col_positions)
-
         geo = self.geo()
 
-        self.file_headers = geo['LOGRECNO'][0] + self.ig(self.sequence_file.file_headers)
-        self.descriptions = geo['LOGRECNO'][0] + self.ig(self.sequence_file.descriptions)
+        # Geo is a map of logrecnos but the first line is the headers, so the LOGREGNO == 'LOGRECNO',
+        # so geo['LOGRECNO'][0] gets headers for GEOID, STUSAB, COUNTY and NAME
+        first_headers = geo['LOGRECNO'][0]
+
+        self.file_headers = list(first_headers)
+        self.descriptions = list(first_headers)
+
+        self._columns = []
+
+        for seq in self.table.seq:
+
+            sequence_file = SequenceFile(self.year, self.release, self.state_abs[0], self.summary_level, seq)
+
+            if not self.lr_pos:
+                self.lr_pos = sequence_file.file_headers.index('LOGRECNO')
 
 
+            seq_columns = []
+
+            for i, c in enumerate(sequence_file.columns):
+                if c.table_id and  c.table_id.lower() == self.tableid.lower():
+                    self._columns.append(c)
+                    seq_columns.append(c)
+
+            positions = [c.seq_file_col_no for c in seq_columns]
+            item_getter  = itemgetter(*positions)
+
+            self.item_getters.append(item_getter)
+
+            try:
+                self.file_headers += item_getter(sequence_file.file_headers)
+                self.descriptions += item_getter(sequence_file.descriptions)
+            except IndexError as e:
+                raise Exception("Failed to get geo columns for table {} : {} ".format(self.tableid, e))
 
     @lru_cache()
     def geo(self, stusab=None):
@@ -263,6 +273,8 @@ class Table(_CensusFile):
 
         return geo
 
+
+
     @property
     def columns(self):
         """Yield Column objects for this table"""
@@ -290,35 +302,38 @@ class Table(_CensusFile):
             yield c
 
     def _iter_components(self):
+        from itertools import chain, islice
 
-        i = 0
-        for stusab in self.state_abs:
+        row_num = 0
+        for state_no, stusab in enumerate(self.state_abs): # For each state
 
             logger.debug(f"Iterate {self.tableid} for state {stusab}")
 
-            sequence_file = SequenceFile(self.year, self.release, stusab,
-                                         self.summary_level, self.seq)
-
             geo = self.geo(stusab)
+            geo_cols, _, _ = list(islice(geo.values(), 1))[0]
 
-            for j, row in enumerate(sequence_file):
+            if state_no == 0:
+                yield 'row_num', 'stusab', 'row_n', geo_cols, tuple(self.file_headers[4:])
 
-                lrno = row[self.lr_pos]
+            sequence_files = [SequenceFile(self.year, self.release, stusab, self.summary_level, seq)
+                              for seq in self.table.seq]
+
+            for seq_row_num, sequence_rows in enumerate(zip(*sequence_files)):
+
+                lrno = sequence_rows[0][self.lr_pos] # get logrecno
 
                 geo_cols, summary_level, geo_row_n = geo[lrno]
 
-                if i == 0 and j == 0:
-                    yield i, 'stusab', 'row_n', geo_cols, self.ig(row)  # Headers, these are supposed to be strings
-                elif j ==0:
-                    pass # its a header on the second or later state
-                else:
-                    if int(summary_level) == int(self.summary_level):
-                        yield i, stusab, stusab+str(int(lrno)), geo_cols, tuple(try_number(e) for e in self.ig(row))
-                        
-                i += 1
+                if seq_row_num != 0 and int(summary_level) == int(self.summary_level):
+                    sub_rows = [ig(seq_row) for ig, seq_row in zip(self.item_getters, sequence_rows)]
+
+                    data_cols = chain(*sub_rows)  # Although, sometimes are actually headers
+
+                    yield row_num, stusab, stusab+str(row_num), geo_cols, tuple(try_number(e) for e in data_cols)
+
+                row_num += 1
 
     def __iter__(self):
-        
         for i, stusab, geo_row_n, geo_cols, data_cols in self._iter_components():
             yield geo_cols + data_cols
 

@@ -7,7 +7,7 @@ from publicdata.census.files.generators import SequenceFile, GeoFile, Table
 from publicdata.census.files.metafiles import Table as MetaTable, Column, TableShell, TableLookup, TableMeta
 
 
-class TestGenerators(unittest.TestCase):
+class TestMeta(unittest.TestCase):
 
     def test_tableshell(self):
 
@@ -56,11 +56,13 @@ class TestGenerators(unittest.TestCase):
         self.assertEqual(ts.tables['c16004'].title.upper(),
                          'AGE BY LANGUAGE SPOKEN AT HOME BY ABILITY TO SPEAK ENGLISH FOR THE POPULATION 5 YEARS AND OVER')
 
+        for t_id, table in ts.tables.items():
+            if table.number_of_segments > 1:
+                print(t_id, table.title)
+
 
     def test_tablemeta(self):
         tm = TableMeta(2016, 1)
-
-        print(tm.url)
 
         tm._process()
 
@@ -122,8 +124,6 @@ class TestGenerators(unittest.TestCase):
         lens = [len(row) for row in tracts]
 
         self.assertTrue(all(x == lens[0] for x in lens))
-
-        print(tm.sequence_file.header_url)
 
 
 

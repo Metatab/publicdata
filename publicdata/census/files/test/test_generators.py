@@ -186,6 +186,14 @@ class TestGenerators(unittest.TestCase):
             states.add(row[1])
             counties.add(row[3])
 
+        from collections import Counter
+
+        c = Counter(row[3] for row in rows[1:])
+
+        for k, v in c.items():
+            if v > 1:
+                print(k,v)
+
         self.assertEqual(52, len(states))
         self.assertEqual(3220, len(counties))
         self.assertEqual(3220,len(rows[1:]))
@@ -194,14 +202,14 @@ class TestGenerators(unittest.TestCase):
 
         sf = SequenceFile(2016,5,'RI',140, 3 )
 
-        h, f, m = list(zip(sf.file_headers, sf.descriptions, sf.meta))[60]
+        h, f, m = list(zip(sf.file_headers, sf.descriptions, sf.columns))[60]
 
         self.assertEqual('B01001G_028', h)
         self.assertEqual('SEX BY AGE (TWO OR MORE RACES) for People Who Are Two Or More Races - Female: - 55 to 64 '
                          'years',
                          f)
 
-        for h,f,m in list(zip(sf.file_headers, sf.descriptions, sf.meta)):
+        for h,f,m in list(zip(sf.file_headers, sf.descriptions, sf.columns)):
             self.assertEqual(h, m.unique_id)
 
     def test_dataframe(self):
@@ -257,8 +265,11 @@ class TestGenerators(unittest.TestCase):
 
             for c in t.columns:
                 if '_m90' not in c.unique_id and 'year' in c.description and not c.age_range and '1 year ago' not in \
-                        c.description:
+                        c.description and 'year-round' not in c.description:
                     parse_errors.append(c)
+
+            for parse_error in parse_errors:
+                print(parse_error.row)
 
             self.assertEqual(0, len(parse_errors))
 
@@ -268,6 +279,7 @@ class TestGenerators(unittest.TestCase):
 
         table_ids = ['b02008', 'b02010', 'b02015']
 
+        table_ids = ['B05010','B17001', 'B17001a', 'B17001b', 'B17001i']
 
         for t_id in table_ids:
             u = parse_app_url('census://2016/5/RI/40/{}'.format(t_id.lower()))
@@ -282,13 +294,25 @@ class TestGenerators(unittest.TestCase):
                 if i > 30:
                     break
 
+    def test_pov_dimensions(self):
+        tm = TableMeta(2016, 5)
+
+        for t_id, table in tm.tables.items():
+            u = parse_app_url('census://2016/5/RI/40/{}'.format(t_id.lower()))
+            g = u.generator
+            t = g.table
+
+            for i, c in enumerate(t.columns):
+                if '_m90' not in c.unique_id and 'poverty' in c.long_description:
+                    print(c.unique_id, c.poverty_status, c.long_description)
+
     def test_dimensions(self):
         tm = TableMeta(2016, 5)
 
         with open('/tmp/dimensions.csv', 'w') as f:
             w = csv.writer(f)
 
-            w.writerow("".split())
+            w.writerow("id sex race age pov description".split())
 
             for t_id, table in tm.tables.items():
                 u = parse_app_url('census://2016/5/RI/40/{}'.format(t_id.lower()))
@@ -298,7 +322,7 @@ class TestGenerators(unittest.TestCase):
                 w.writerow([t_id, table.title])
                 for i, c in enumerate(t.columns):
                     if '_m90' not in c.unique_id and i > 3:
-                        row = [c.unique_id, c.sex, c.race, c.age, c.description]
+                        row = [c.unique_id, c.sex, c.race, c.age, c.poverty_status, c.description]
                         print(row)
                         w.writerow(row)
 

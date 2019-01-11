@@ -23,7 +23,7 @@ class CensusFileUrl(CensusUrl):
 
     """
 
-    default_year = 2016
+    default_year = 2017
 
     def __init__(self, url=None, downloader=None, **kwargs):
 

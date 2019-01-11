@@ -89,5 +89,20 @@ class TestBasic(TestCase):
         gdf = rg.geoframe('censusgeo://CA/140')
         self.assertEqual(43.083, gdf.area.sum().round(3))
 
+    def test_dimensions(self):
+
+        import rowgenerators as rg
+
+        df = rg.dataframe('census://CA/140/B17001')
+
+        print(type(df))
+
+        #for c in df.table.columns:
+        #    print(c.unique_id, c.sex, c.race, c.age, c.poverty_status)
+
+        print(df.head())
+
+
+
 if __name__ == '__main__':
     unittest.main()

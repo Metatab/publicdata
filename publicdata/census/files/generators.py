@@ -153,7 +153,6 @@ class SequenceFile(_CensusFile):
         for e, m in zip(parse_app_url(self.est_url).generator, parse_app_url(self.margin_url).generator):
             yield e[:6] + list(ileave(e[6:], m[6:]))
 
-
 class Table(_CensusFile):
     """Iterator for a single table in a single segment file
 
@@ -295,7 +294,7 @@ class Table(_CensusFile):
             c.long_description = ld
 
             # Long description includes the table title
-            c.description = ' - '.join(c.long_description.split(' - ')[1:])
+            c.description = ' - '.join(c.long_description.split('-')[1:])
 
             c.short_description = short_descriptions_map.get(c.unique_id)
 
@@ -313,7 +312,8 @@ class Table(_CensusFile):
             geo_cols, _, _ = list(islice(geo.values(), 1))[0]
 
             if state_no == 0:
-                yield 'row_num', 'stusab', 'row_n', geo_cols, tuple(self.file_headers[4:])
+                yield 'row_num', 'stusab', 'row_n', tuple( e.lower() for e in geo_cols), \
+                        tuple(e.lower() for e in tuple(self.file_headers[4:]))
 
             sequence_files = [SequenceFile(self.year, self.release, stusab, self.summary_level, seq)
                               for seq in self.table.seq]
@@ -458,7 +458,7 @@ class CensusSource(Source):
 
         df.release = self.ref.release
 
-        return df.replace('.', np.nan).set_index('GEOID')
+        return df.replace('.', np.nan).set_index('geoid')
 
     def geoframe(self, *args, limit=None, **kwargs):
         """Return a geoframe for the associated geographic information"""

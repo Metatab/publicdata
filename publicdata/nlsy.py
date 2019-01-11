@@ -5,9 +5,17 @@
 
 """
 
-from appurl import WebUrl
-from rowgenerators import Source
+from itertools import islice
+from math import ceil
+
+import csv
+import h5py
+import numpy as np
+import pandas as pd
 from copy import copy
+from pathlib import Path
+from rowgenerators import Source
+from rowgenerators.appurl.web import WebUrl
 
 
 class NlsyUrl(WebUrl):
@@ -218,7 +226,7 @@ class NLSY79(NLSY):
     respondent_cols = ['SAMPLE_ID','SAMPLE_RACE','SAMPLE_SEX','SHIFTSP_86A','VERSION_R26']
 
 
-def extract_from_codebook(f):
+def extract_from_codebook(f, cb=None):
     """
     Parse the codebook for the NYLS79 full dataset, downloadable from
     https://www.nlsinfo.org/accessing-data-cohorts
@@ -229,6 +237,7 @@ def extract_from_codebook(f):
     """
 
     import re
+    import hashlib
 
     vars = []
     var = None
@@ -236,56 +245,85 @@ def extract_from_codebook(f):
     var_no = 0
     in_val_labels = False
 
+    if not cb:
+        cb = lambda v: None
+
     for line_no, l in enumerate(f.readlines()):
+
+        cb(line_no)
+
         if 'Survey Year' in l and 'COMMENT' not in l:
             var_line = 0
             var_no += 1
             p = l.split()
             var = {
                 'var_no': var_no,
-                # 'labels': [],
+                'col_no': var_no -1,
+                'labels': {},
+                'labels_id': None,
                 'variable_name': p[0],
                 'variable_name_nd': p[0].replace('.', ''),
                 'question_name': p[1].replace('[', '').replace(']', ''),
                 'survey_year': p[4]
             }
 
+        if len(l.strip()) == 0:
+            pass
+
         if var_line == 4:
             var['question'] = l.strip()
 
-        if var_line == 5:
-            in_val_labels = True
-
+        # Mark the indented value labels
         if re.match(r'\-{5,20}', l.strip()) and in_val_labels:  # '-----', the summation line for value counts
-            # Marks end of value labels
+            # Marks end of value label
             in_val_labels = False
+        elif re.match(r'\s{4,8}\d', l) and not var['labels']:
+            in_val_labels = True
 
         if '---------------------------------' in l:
             # Marks end of question
+
+            var['labels_id'] = hashlib.sha224(
+                ('\n'.join(["{}:{}".format(*e)for e in sorted(var['labels'].items())])).encode('utf8')
+            ).hexdigest()
+
             if var:
                 vars.append(var)
 
             v = None
 
-        if in_val_labels and False:  # Not quite working
-            if l.strip() and 'COMMENT' not in l:
-                try:
-                    count, val_label = re.split(r'\s{2,}', l.strip())
-                except:
-                    print('Line: ', l)
-                    raise
-                if ':' in val_label:
-                    val, label = val_label.split(':')
-                else:
-                    val, label = val_label, val_label
+        if in_val_labels:  # Not quite working
 
-                var['labels'].append((val.strip(), label.strip(), int(count.strip())))
+            try:
+                l = l.strip()
+                if ':' in l:
+                    m = re.match(r'(\d+)\s+([^:]+):(.*)', l)
+                    count, val, label = m.groups() if m else (None, None, None)
+                elif ' TO ' in l:
+                    m = re.match(r'(\d+)\s+(.*)', l)
+                    count,  val = m.groups() if m else (None, None)
+                    label = val
+                else:
+                    m = re.match(r'(\d+)\s+(\d+)\s+(.*)',l)
+                    count, val, label = m.groups() if m else (None, None, None)
+
+                if m:
+
+                    if 'TO' in val: # The value is a range
+                        parts = val.strip().split()
+                        val = '-'.join((parts[0], parts[2]))
+                    else:
+                        val.strip()
+
+                    var['labels'][val] = label.strip()
+
+            except:
+                print('Line: ', l)
+                raise
 
         var_line += 1
 
-        # if line_no > 50000 or var_no > 100:
-        #    var = None
-        #    break
+
 
     if var:  # Maybe last line doesn't have h-rule marker
         vars.append(var)
@@ -347,22 +385,209 @@ def parse_vars(resource, doc, *args, **kwargs):
         yield row
 
 
-import unittest
+def split():
+    from itertools import zip_longest
+    import argparse
+    from math import ceil
+    import numpy as np
+    import h5py
+    # from tqdm import tqdm
 
+    def tqdm(i, *args, **kwargs):
+        return i
 
-class TestNlsy97(unittest.TestCase):
-    def test_basic(self):
-        import metapack as mp
-        import pandas as pd
+    nrows = 8983
+    chunk_size = 250
+    nchunks = ceil(nrows / chunk_size)
 
-        pd.set_option('display.width', 120)
-        pd.set_option('display.max_columns', 12)
+    parser = argparse.ArgumentParser(description='Dump a subset of NLSY columns')
+    parser.add_argument('-s', '--start', type=int, help='Start column')
+    parser.add_argument('-e', '--end', type=int, help='End column')
+    parser.add_argument('base', help='Base file name')
 
-        p = mp.open_package(
-            '/Volumes/Storage/proj/virt/data-projects/workshift.us/packages/nlsinfo.org-nlsy-shiftwork/metadata.csv')
+    args = parser.parse_args()
 
-        nlsy = NLSY97(p.reference('shiftwork_97'))
+    def header_row():
+        # Yield the header
+        with open(f'{args.base}.NLSY97') as f:
+            return [c.strip() for c in f.readlines()]
 
-        print(nlsy.var_labels)
+    def yield_rows():
 
-        print(nlsy.question_frame('YEMP_81300').head())
+        # yield header_row()
+
+        with open(f'{args.base}.dat') as f:
+            for i, line in enumerate(f.readlines()):
+                yield line.rstrip().split(' ')
+
+                if i > nrows:
+                    break
+
+    ncols = len(header_row())
+
+    print(f'{ncols} columns {nchunks} chunks {chunk_size} chunk_size')
+
+    with h5py.File(f'{args.base}.h5', "w") as h5f:
+        dset = h5f.create_dataset(f'{args.base}', (chunk_size * nchunks, ncols), dtype=np.int32, chunks=True,
+                                  compression="gzip")
+
+        row_n = 0
+        # zip_longest chunking from https://stackoverflow.com/a/312644
+        for chunkn, chunk in enumerate(
+                tqdm(zip_longest(*[iter(yield_rows())] * chunk_size), desc='chunks', total=nchunks)):
+
+            a = np.zeros((chunk_size, ncols), dtype=np.int32)
+
+            for chunk_row_n, row in enumerate(tqdm(chunk, desc=f'rows in chunk', leave=False)):
+                try:
+                    a[chunk_row_n, :] = [int(e) for e in row]
+                except TypeError:
+                    break
+
+                row_n += 1
+
+            dset[chunkn * chunk_size:(chunkn + 1) * chunk_size, :] = a[:chunk_size, ]
+
+        dset.resize((nrows, ncols))
+
+def convert_cbd(cdb_file, hdf_file):
+    """Convert a .cdb ( data dictionary) file to CSV and add the data to the
+    HDF5 file for the survey data"""
+
+    from tqdm import tqdm
+
+    def callback(m, l):
+        import sys
+        print(">>> {} {:,} lines      ".format(m, l), end='\r')
+        sys.stdout.flush()
+
+    csv_meta_file = Path(cdb_file).with_suffix('.meta.csv')
+    csv_labels_file = Path(cdb_file).with_suffix('.labels.csv')
+
+    headers_file = Path(cdb_file).with_suffix('.NLSY97')
+
+    last_label_num = 0
+    label_nums = {}
+    with open(cdb_file) as f, open(csv_meta_file, 'w') as fo, open(csv_labels_file, 'w') as fl:
+
+        v = extract_from_codebook(f, cb=lambda l: callback('processed', l))
+
+        labels = {}
+
+        for i, e in enumerate(tqdm(v, desc='Variables')):
+
+            if 'labels' in e:
+
+                lid = e['labels_id']
+
+                if not lid in label_nums:
+                    label_nums[lid] = last_label_num
+                    last_label_num += 1
+
+                label_num = label_nums[lid]
+                e['labels_id'] = label_num
+                labels[label_num] = e['labels']
+
+                del e['labels']
+
+            if i == 0:
+                wv = csv.DictWriter(fo, fieldnames=e.keys())
+                wv.writeheader()
+
+            wv.writerow(e)
+
+        wl = csv.writer(fl)
+        wl.writerow('label_id value lower upper label'.split())
+
+        for i, (lid, labels) in enumerate(tqdm(labels.items(), desc='Values   ')):
+            for k, v in labels.items():
+
+                if '-' in k:
+                    try:
+                        lower, upper = k.split('-')
+                    except ValueError:
+                        lower, upper = (None, None)
+                else:
+                    lower = upper = ''
+
+                wl.writerow([lid, k, lower, upper, v])
+    ##
+    ## Now add the CSV files into the HDF5 file
+
+    with h5py.File(hdf_file, 'r+') as f:
+
+        base = Path(cdb_file).stem
+
+        try:
+            f[str(base)]  # Throw exception if it does not exist
+        except KeyError:
+            raise Exception("Failed to find dataset {}. File has: {}".format(base, list(f.keys())))
+
+        # Value and Variable labels
+
+        for dsn, fn in (('value_labels', csv_labels_file), ('variable_labels', csv_meta_file)):
+
+            dsn = base + '_' + dsn
+
+            values = pd.read_csv(fn)
+
+            if dsn in f:
+                del f[dsn]
+
+            f.create_dataset(dsn, values.shape, dtype=h5py.special_dtype(vlen=str), chunks=True, compression="gzip",
+                             data=values)
+
+        headers_df = pd.read_csv(headers_file, header=None)
+
+        if base + '_headers' in f:
+            del f[base + '_headers']
+
+        f.create_dataset(base + '_headers', (len(headers_df),), dtype=h5py.special_dtype(vlen=str), chunks=True,
+                                compression="gzip",
+                                data=headers_df)
+
+def convert_nlsy(dat_file, hdf5_file):
+    """Convert an nlsy file data file to HDF5"""
+
+    from tqdm import tqdm
+
+    base = Path(dat_file).stem
+
+    nrows = 8983
+    chunk_size = 250
+    nchunks = ceil(nrows / chunk_size)
+
+    def header_row():
+        # Yield the header
+        with open(f'{base}.NLSY97') as f:
+            return [c.strip() for c in f.readlines()]
+
+    def yield_rows():
+
+        with open(f'{base}.dat') as f:
+            for i, line in enumerate(islice(f.readlines(), nrows)):
+                yield line.rstrip().split(' ')
+
+    ncols = len(header_row())
+
+    print(f'{ncols} columns {nchunks} chunks {chunk_size} chunk_size')
+    chunkn = 0
+    with h5py.File(hdf5_file, "w") as h5f:
+
+        dset = h5f.create_dataset(f'base', (chunk_size * nchunks, ncols), dtype=np.int32, chunks=True,
+                                  compression="gzip")
+
+        a = np.zeros((chunk_size, ncols), dtype=np.int32)
+
+        for row_n, row in enumerate(tqdm(yield_rows(), total=nrows, ncols=80)):
+
+            a[row_n % chunk_size, :] = [int(e) for e in row]
+
+            if (row_n + 1) % chunk_size == 0:
+                dset[chunkn * chunk_size:(chunkn + 1) * chunk_size, :] = a[:, :]
+                a = np.zeros((chunk_size, ncols), dtype=np.int32)
+                chunkn += 1
+        else:
+            dset[chunkn * chunk_size:(chunkn + 1) * chunk_size, :] = a[:, :]
+
+        dset.resize((nrows, ncols))

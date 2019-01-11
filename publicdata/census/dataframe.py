@@ -15,11 +15,10 @@ class CensusDataFrame(pd.DataFrame):
     def __init__(self, data=None, index=None, columns=None, dtype=None, copy=False, schema=None,
                  table=None, url=None):
 
-
         if columns is None and schema is not None:
 
             self.title_map = {s['code']: s['code_title'] for s in schema}
-            columns = self.title_map.keys()
+            columns = list( e.lower() for e in self.title_map.keys())
         else:
             self.title_map = {}
 
@@ -47,6 +46,7 @@ class CensusDataFrame(pd.DataFrame):
 
         # There is a bug elsewhere that sometimes the columns are uppercase, and sometimes
         # they are lowercase.
+
 
         m = dict( list(self.title_map.items()) +
                   [ (k.lower(), v) for k,v in self.title_map.items()])
@@ -378,6 +378,43 @@ class CensusDataFrame(pd.DataFrame):
         return groupby(self, by=by, axis=axis, level=level, as_index=as_index,
                        sort=sort, group_keys=group_keys, squeeze=squeeze,
                        **kwargs)
+
+    def stacked(self, add_dimensions=False):
+        """Return a plain Dataframe in a stacked format, with a column for the column name
+        and one column for all margins and one for all estimates.
+
+        Drops the name, county and  and stusab because they get replicated once for each column.
+        Filter on them before stacking.
+        """
+
+        t = self.drop(columns=['stusab', 'name', 'county'])
+
+        t = pd.DataFrame(t)
+        t1 = t[[c for c in t.columns if '_m90' not in c]].stack().to_frame()
+        t1.columns = ['estimate']
+        t2 = t[[c for c in t.columns if '_m90' in c]]
+        t2.columns = [c.replace('_m90', '') for c in t2.columns]
+        t2 = t2.stack().to_frame()
+        t2.columns = ['margin']
+        t3 = t1.join(t2)
+        t3.index.names = ['geoid', 'column']
+
+        if add_dimensions:
+            sex = pd.DataFrame([(c.unique_id.lower(), c.sex) for c in self.table.columns],
+                               columns=['column', 'sex']).set_index('column')
+            age = pd.DataFrame([(c.unique_id.lower(), c.age) for c in self.table.columns],
+                               columns=['column', 'age']).set_index('column')
+            raceeth = pd.DataFrame([(c.unique_id.lower(), c.raceeth) for c in self.table.columns],
+                                columns=['column', 'raceeth']).set_index('column')
+            pov = pd.DataFrame([(c.unique_id.lower(), c.poverty_status) for c in self.table.columns],
+                               columns=['column', 'poverty_status']).set_index('column')
+
+            t4 = t3.join(sex).join(age).join(raceeth).join(pov).reset_index()
+
+            # Move the margin and estimate columns to the end
+            return t4[list(c for c in t4.columns if c not in ['estimate', 'margin']) + ['estimate', 'margin']]
+        else:
+            return t3
 
     ##
     ## Extension Points

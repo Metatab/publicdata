@@ -90,6 +90,20 @@ class TestIssues(unittest.TestCase):
         from rowgenerators import dataframe
         df = dataframe('census://2016/5/RI/40/B24121')
 
+    def test_titles(self):
+        import rowgenerators as rg
+        #df = rg.dataframe(f'census:/2017/1/CA/50/B22003')
+        #print(df.titles.head().T)
+
+        u = parse_app_url('census:/2017/1/CA/50/B22003')
+        for e in u.generator.table.columns:
+            print(e.row)
+
+    def test_B02001(self):
+        import rowgenerators as rg
+
+        raceeth = rg.dataframe('census://2017/5/tract/B02001')
+
 
 if __name__ == '__main__':
     unittest.main()

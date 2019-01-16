@@ -188,6 +188,7 @@ def extract_from_codebook(cdb_file, limit=None, force=False):
             return pickle.load(f)
 
 
+
 def create_label_sets(procd_val_labels):
     from .labels import get_remap_dict, process_value_labels
     import hashlib
@@ -266,8 +267,10 @@ def convert_cdb(cdb_file):
 
     procd_value_labels = list(process_value_labels(codeb))
 
+    wrote_files = []
+
     ##
-    ##  Write Labels file
+    ##  Write full Labels file
     with open(csv_labels_file, 'w') as fl:
         wl = csv.writer(fl)
         wl.writerow('question_name base_name value label'.split())
@@ -277,9 +280,11 @@ def convert_cdb(cdb_file):
                 for k,v in d.items():
                     wl.writerow([qn, base_qn, k, v])
 
+        wrote_files.append(csv_labels_file)
+
     labels, qn_to_lid = create_label_sets(procd_value_labels)
 
-    print(v)
+
 
     ##
     ## Write meta csv, and extract labels for later.
@@ -307,6 +312,8 @@ def convert_cdb(cdb_file):
 
             wv.writerow(e)
 
+        wrote_files.append(csv_meta_file)
+
     ##
     ##  Write Labels file
     with open(csv_reducedlabels_file, 'w') as fl:
@@ -322,6 +329,10 @@ def convert_cdb(cdb_file):
                 # This happens once, for instance with BIOCHILD_BDATE.01~Y
                 wl.writerow([lid, None, None])
 
+        wrote_files.append(csv_reducedlabels_file)
+
+
+    return wrote_files
 
 def main():
     import argparse

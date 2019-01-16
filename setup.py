@@ -21,7 +21,11 @@ setup(
         'rowgenerators',
         'pandas',
         'requests',
-        'geoid'
+        'geoid',
+        'tqdm',
+        'fuzzy', # For NLSY
+        'nltk', # for NLSY
+        'stringdist' # For NLSY
         ],
     entry_points={
         'appurl.urls': [

@@ -5,15 +5,14 @@
 Functions for processing value labels
 """
 import csv
-import fuzzy
-import nltk
+
 from pathlib import Path
-from publicdata.nlsy.cdb import extract_from_codebook
 from tqdm import tqdm
 
+import fuzzy
 dmeta = fuzzy.DMetaphone()
-from nltk.tokenize import RegexpTokenizer
 
+from nltk.tokenize import RegexpTokenizer
 tokenizer = RegexpTokenizer(r'\w+')
 
 

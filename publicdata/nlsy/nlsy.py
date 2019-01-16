@@ -28,6 +28,7 @@ class NlsySource(Source):
 class NLSY(object):
 
     respondent_cols = None # Columns for variables that are about the respondent, across years.
+    f = None
 
     def __init__(self, hdf):
 
@@ -42,11 +43,13 @@ class NLSY(object):
         self._column_map = None
         self._question_map = None
         self._respondent_meta = None
+
     def __del__(self):
         self.close()
 
     def close(self):
-        self.f.close()
+        if self.f:
+            self.f.close()
 
     @property
     def metadata(self):
@@ -69,10 +72,16 @@ class NLSY(object):
 
         label_maps = {}
 
+        def maybeint(v):
+            try:
+                return int(v)
+            except ValueError:
+                return v
+
         g = t.groupby(var_name)
         for question_name in g.groups:
             group = g.get_group(question_name)
-            label_maps[question_name] = dict(zip(group.value, group.label))
+            label_maps[question_name] = dict(zip( [maybeint(e) for e in group.value], group.label))
 
         return label_maps
 
@@ -116,10 +125,18 @@ class NLSY(object):
         given columns"""
         q_meta = self.metadata[self.metadata.variable_name_nd.isin(columns)]
 
-        return q_meta[['variable_name_nd', 'survey_year', 'dim1', 'dim2', 'dim3',
+        df =  q_meta[['variable_name_nd', 'survey_year', 'dim1', 'dim2', 'dim3',
                          'component', 'response_choice']] \
             .replace('nan', np.nan) \
             .dropna(axis=1, how='all')
+
+        try:
+            df['survey_year'] = df.survey_year.astype(int)
+        except:
+            # Not for "XRND", etc
+            pass
+
+        return df
 
     @property
     def respondent_meta(self):
@@ -162,10 +179,7 @@ class NLSY(object):
     def base_question_columns(self,base_qn):
 
         m = self.metadata
-
         return list(m[m.base_qn == base_qn].variable_name_nd)
-
-
 
     def question_dataframe(self, base_qn, rmeta=True, cmeta=True):
         """
@@ -183,7 +197,12 @@ class NLSY(object):
         elif rmeta is False:
             rmeta = self.min_respondent_cols
 
-        df = self[self.base_question_columns(base_qn)]
+        cols = self.base_question_columns(base_qn)
+
+        if not cols:
+            return None
+
+        df = self[cols]
 
         respondent_meta = self.respondent_meta
         assert len(respondent_meta) == len(df)

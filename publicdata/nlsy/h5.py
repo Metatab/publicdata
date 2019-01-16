@@ -15,12 +15,10 @@ from tqdm import tqdm
 from math import ceil
 from itertools import islice
 
-def convert_nlsy(dat_file):
+def convert_nlsy(dat_file, header_file, hdf5_file):
     """Convert an nlsy file data file to HDF5"""
 
     base = Path(dat_file).stem
-    hdf5_file  = Path(dat_file).with_suffix('.h5')
-    header_file = Path(dat_file).with_suffix('.NLSY97')
 
     nrows = 8983
     chunk_size = 250
@@ -99,6 +97,7 @@ def load_metadata(dat_file ):
             f.create_dataset(dsn+'_headers',  (len(values.columns),), dtype=h5py.special_dtype(vlen=str), chunks=True,
                              compression="gzip",
                              data=values.columns)
+
 
         headers_df = pd.read_csv(header_file, header=None)
 

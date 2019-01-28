@@ -8,7 +8,7 @@ if sys.argv[-1] == 'publish':
 
 setup(
     name='publicdata',
-    version='0.3.6',
+    version='0.3.7',
     url='https://github.com/CivicKnowledge/publicdata',
     license='MIT',
     author='Eric Busboom',
@@ -32,7 +32,8 @@ setup(
             "censusreporter: = publicdata.census.censusreporter:CensusReporterURL",
             "censusreportergeo: = publicdata.census.censusreporter:CensusReporterShapeURL",
             "census: = publicdata.census.files.appurl:CensusFile",
-            "censusgeo: = publicdata.census.files.appurl:CensusGeoUrl"
+            "censusgeo: = publicdata.census.files.appurl:CensusGeoUrl",
+            "nlsy+ = publicdata.nlsy.appurl:NlsyUrl"
         ],
         'rowgenerators': [
             "CRJSON+ = publicdata.census.censusreporter:CensusReporterSource",

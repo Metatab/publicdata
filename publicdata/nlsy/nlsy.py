@@ -18,6 +18,7 @@ from rowgenerators import Source
 from rowgenerators.appurl.web import WebUrl
 from functools import lru_cache
 
+
 class NlsyUrl(WebUrl):
     pass
 
@@ -29,6 +30,15 @@ class NLSY(object):
 
     respondent_cols = None # Columns for variables that are about the respondent, across years.
     f = None
+
+    na_labels = {
+        '-1': 'NA',
+        '-2': 'NA',
+        '-3': 'NA',
+        '-4': 'NA',
+        '-5': 'NA'
+
+    }
 
     def __init__(self, hdf):
 
@@ -56,12 +66,53 @@ class NLSY(object):
         if self._metadata is None:
             self._metadata = self._get_dataframe(self.base_name+'_variable_labels')
 
+            # Fix brokenness
+            #  https://github.com/Metatab/publicdata/issues/7
+            for col in ['var_no', 'col_no', 'labels_id', 'is_categorical']:
+                self._metadata[col].replace('nan', np.nan, inplace=True)
+                self._metadata[col] = pd.to_numeric(self._metadata[col])
+
+            self._metadata.replace(['nan'], [None], inplace=True)
+
+            self._metadata.at[1, 'is_categorical'] = 1
+
+
         return self._metadata
 
     @property
     def valuelabels(self):
         if self._value_labels is None:
             self._value_labels = self._get_dataframe(self.base_name + '_value_labels')
+
+            # Fix Brokeness: https://github.com/Metatab/publicdata/issues/8
+
+            # These are all cases where there is a ';' in an unexpected place.
+            self._value_labels.replace({
+                '12 FOR SCHOOL EMPLOYEES ONLY': 12,
+                '12  FOR SCHOOL EMPLOYEES ONLY': 12,
+                '3 SCHOOL EMPLOYEES': 3,
+                '3 School employees': 3,
+                '3 Transcript requested': 3,
+                '4 Transcript requested': 4,
+                '5 Transcript requested': 5,
+                '6 Transcript requested': 6,
+                '7 Transcript requested': 7,
+                '7 Transcript not requested': 7,
+                '8 Transcript not requested': 8,
+                '9 Transcript not requested': 9,
+                '10 Transcript not requested': 10,
+                '11 Transcript not requested': 11,
+                'or Advanced Biology': None,
+                '0 FI': 0,
+            }, inplace=True)
+
+            self._value_labels['value'] = pd.to_numeric(self._value_labels['value'])
+
+            self._value_labels.dropna(inplace=True)
+
+            self._value_labels['value'] = self._value_labels['value'].astype('int')
+
+
 
         return self._value_labels
 
@@ -72,6 +123,7 @@ class NLSY(object):
 
         label_maps = {}
 
+
         def maybeint(v):
             try:
                 return int(v)
@@ -81,7 +133,12 @@ class NLSY(object):
         g = t.groupby(var_name)
         for question_name in g.groups:
             group = g.get_group(question_name)
-            label_maps[question_name] = dict(zip( [maybeint(e) for e in group.value], group.label))
+
+            lm = dict(zip( [maybeint(e) for e in group.value], group.label))
+
+            #lm.update(self.na_labels)
+
+            label_maps[question_name] = lm
 
         return label_maps
 
@@ -145,7 +202,11 @@ class NLSY(object):
             self._respondent_meta = self.get_dataframe(self.respondent_cols)
             self._respondent_meta.columns = [self.question_map[c] for c in self._respondent_meta.columns]
 
-        return self._respondent_meta.copy()
+        df =  self._respondent_meta.copy()
+
+
+
+        return df
 
     @lru_cache()
     def _get_dataframe(self, name, col_nos=None):
@@ -179,13 +240,16 @@ class NLSY(object):
     def base_question_columns(self,base_qn):
 
         m = self.metadata
+
         return list(m[m.base_qn == base_qn].variable_name_nd)
 
-    def question_dataframe(self, base_qn, rmeta=True, cmeta=True):
+    def _question_dataframe(self, base_qn, rmeta=True, cmeta=True, replacena=False, agg=None):
         """
         Return a dataframe with all columns for a base question, linked to the column metadata
         and some respondent data. The dataframe will be pivoted so there is a single
 
+        :param replacena:
+        :return:
         :param base_qn:
         :param rmeta:
         :param cmeta:
@@ -219,19 +283,108 @@ class NLSY(object):
 
             t = t[col_order]
 
-        return t.drop(columns=["variable_name_nd"])
+        t = t.drop(columns=["variable_name_nd"])
 
-    def categoricalize(self,df):
+        if replacena:
+            t[base_qn] = t[base_qn].where(t[base_qn]>=0, np.nan)
+
+        if agg:
+            t = t.groupby(['PUBID','survey_year']).agg(agg)[base_qn].to_frame().reset_index()
+
+
+        return t
+
+    def question_dataframe(self, base_qn, rmeta=True, cmeta=True, replacena=False, agg=None):
+        """
+        :param base_qn:  Base question, either a single string, or a list of string question names
+        :param rmeta: If True, link in respondent metadata. Defaults to True
+        :param cmeta: If True, link in column metadata. Defaults to True
+        :param dropna: If true, replace negative values with Nan. Defaults to True
+        :param agg: If set, group the dataframe on PUBID and survey year, and apply this aggregation function
+        :return:
+
+
+        The `agg` parameter is important for questions that  have multiples dimensions, such as YSCH-20500.01.02,
+        which has two extra dimensions, for college # ( '01' ) and term #, ('02'). Question dataframes with
+        dimensions cannot be merged with question dataframes with a different set of dimensions.
+
+        There are 5  dimensions that the aggregation function may have to consider.
+
+        * dim1
+        * dim2
+        * dim3
+        * component
+        * response_choice
+
+        For example, for the question name: 'YSCH-23900.01.02.03~000004' The dimensions are
+
+        * dim: 1
+        * dim2: 2
+        * dim3: 3
+        * component 4
+        * response_choice "1. Your biological parents together"
+
+        The first four are parts of the name, the response choice is defined in the codebook for the heading "RESPONSE
+        CHOICE" and should be linked to the component. The is, when both the comonent and response choice are
+        defined, the component is a number that identifies the response choice.
+
+        """
+
+        from publicdata.nlsy import NlsyError
+
+        if isinstance(base_qn, (list, tuple)):
+
+            def get_agg(base_qn):
+
+                try:
+                    return agg.get(base_qn)
+                except AttributeError:
+                    return agg
+
+            frames = [ self._question_dataframe(e.strip(), False, True,
+                                                replacena=replacena, agg=get_agg(e.strip()))
+                       for e in base_qn ]
+
+            from functools import reduce
+            try:
+                df = reduce(lambda x, y: x.join(y, how='outer'), [e.set_index(['PUBID', 'survey_year']) for e in frames])
+            except ValueError as e:
+                raise NlsyError('Failed to join question data frames, '
+                                "probably because some have extra dimensions and others don't: " + str(e))
+
+
+            if rmeta:
+                df = df.join(self.respondent_meta.set_index('PUBID'))
+
+            return df
+
+        else:
+            return self._question_dataframe(base_qn.strip(), rmeta, cmeta, replacena, agg)
+
+    def categoricalize(self,df, columns=None):
         """Convert all of the categorical columns.
         The columns must have question names, not variable names. """
         lm = self.get_label_maps(df)
 
+        if isinstance(columns, str):
+            columns = [columns]
+
         for c in df:
+
+            if columns and c not in columns:
+                continue
+
             if c in lm:
                 df[c] = df[c].astype('category').cat.rename_categories({int(k): v for k, v in lm[c].items()})
             pass
 
         return df
+
+
+    def dummify(self, df):
+        pass
+
+
 
 
     def __getitem__(self, item):

@@ -10,21 +10,22 @@ from pathlib import Path
 from tqdm import tqdm
 
 import fuzzy
+
 dmeta = fuzzy.DMetaphone()
 
 from nltk.tokenize import RegexpTokenizer
+
 tokenizer = RegexpTokenizer(r'\w+')
 
 
 def dmeta_sub(s1, s2):
-
     try:
         p1 = sorted(dmeta(str(e))[0] for e in tokenizer.tokenize(str(s1)))
         p2 = sorted(dmeta(str(e))[0] for e in tokenizer.tokenize(str(s2)))
     except TypeError:
-        #print("!!! {}, {}".format(s1, s2))
+        # print("!!! {}, {}".format(s1, s2))
         return 100
-        #raise
+        # raise
 
     if all(w1 in p2 for w1 in p1) or all(w2 in p1 for w2 in p2):
         return 0
@@ -107,8 +108,8 @@ def get_clusters(qn, meta_df, label_df):
         if len(clusters) > 1:
             yield (value, clusters)
 
-def merged_value_map(qn, meta_df, label_df):
 
+def merged_value_map(qn, meta_df, label_df):
     def _merged_value_map(qn, meta_df, label_df):
         label_ids = meta_df[meta_df.base_qn == qn].labels_id.astype(int)
 
@@ -136,15 +137,15 @@ def merged_value_map(qn, meta_df, label_df):
                 # If there is only one cluster, The value maps  directly to one of the values
 
                 cluster = next(iter(clusters))
-                yield (value,  shortest_value(cluster))
+                yield (value, shortest_value(cluster))
             else:
                 labels = [shortest_value(cluster) for cluster in clusters]
-                columns = tuple( convert_to_columns(e[1] for e in cluster) for cluster in clusters )
+                columns = tuple(convert_to_columns(e[1] for e in cluster) for cluster in clusters)
 
-                yield(value, list(zip(labels, columns)))
+                yield (value, list(zip(labels, columns)))
 
     d = dict(_merged_value_map(qn, meta_df, label_df))
-    remaps = [ k for k,v in d.items() if isinstance(v, list) ]
+    remaps = [k for k, v in d.items() if isinstance(v, list)]
 
     return d, remaps
 
@@ -163,6 +164,7 @@ def remap_values(meta_df, label_df):
                     if value != final_value and not value in seen:
                         yield [qn, slugify(value), final_value.title()]
                         seen.add(value)
+
 
 
 def process_value_labels(v):
@@ -185,21 +187,20 @@ def generate_remap_rows(procd_val_labels):
 
     qn_labels = defaultdict(list)
 
-
     # Group label sets by base question name
     for qn, bqn, _, _, d in procd_val_labels:
         qn_labels[bqn].append((d, qn))
 
-    for bqn, label_sets in tqdm(qn_labels.items(),desc='find clusters'): # For each question name.
+    for bqn, label_sets in tqdm(qn_labels.items(), desc='find clusters'):  # For each question name.
 
         value_labels = defaultdict(set)
 
-        for ls, qn in label_sets: # Group labels by value
+        for ls, qn in label_sets:  # Group labels by value
             for k, v in ls.items():
-                value_labels[k].add((v,qn))
+                value_labels[k].add((v, qn))
 
         # For each value, cluster all of the labels.
-        for k,v in value_labels.items():
+        for k, v in value_labels.items():
             clusters = cluster_words(v)
             for cn, cluster in enumerate(clusters):
                 # For each cluster, find the shortest label,
@@ -215,17 +216,16 @@ def generate_remap_rows(procd_val_labels):
 
 
 def get_remap_dict(procd_val_labels):
-
     from collections import defaultdict
     rd = defaultdict(dict)
 
     for qn, k, cn, label, shortest in generate_remap_rows(procd_val_labels):
-        rd[qn+':'+str(k)][label] = shortest
+        rd[qn + ':' + str(k)][label] = shortest
 
     return rd
 
-def write_remap_file(cdb_file):
 
+def write_remap_file(cdb_file):
     remap_file = Path(cdb_file).with_suffix('.remap.csv')
 
     with open(remap_file, 'w') as fo:
@@ -249,8 +249,14 @@ def join_label_lines(lines):
                 continue_line = line
                 continue
 
+            if 'or Advanced Biology' in line:
+                # Line should be matched by clause above, but it isn't because it starts with a number
+                print('!!!', line)
+                continue_line = line
+                continue
+
             if continue_line:
-                line = line + ' ' +(continue_line.strip())
+                line = line + ' ' + (continue_line.strip())
                 continue_line = None
 
             yield line.strip()
@@ -267,6 +273,7 @@ def markup_label_lines(lines):
             line = re.sub('Other\s*-\s*Recoded to', '', line, flags=re.IGNORECASE)
             line = re.sub('Other\s*-\s*Recoed to', '', line, flags=re.IGNORECASE)
             line = re.sub('Added in -', '', line, flags=re.IGNORECASE)
+            line = re.sub('0 FI:', '0: FI', line)
             line = re.sub(r'\(\s*Go To [^\)]+\s*\)', '', line).strip().replace('\t', '|')
             line = re.sub('\d+\.', '', line)
 
@@ -281,14 +288,23 @@ def markup_label_lines(lines):
             # Remove the count number
             line = re.sub('^(\d+)\s+', '', line)
 
-            line = line.replace(':','|',1)
+            if re.search('\d+\s+([^:]{15,}):', line):
+                line = re.sub('(\d+)\s+(.*)',r'\1: \2', line)
+                mark = True
+
+            line = line.replace(':', '|', 1)
+
+            # Lines with match position of colons, like:
+            #
+
 
             if not '|' in line:
                 if re.match('^\d+ TO \d+$', line.strip()):
-                    line = line+'|' # Its a range
+                    line = line + '|'  # Its a range
                 else:
                     # It just just missing the ':'
-                    line = re.sub('(\d+)\s*',r'\1|', line, count=1)
+                    line = re.sub('(\d+)\s*', r'\1|', line, count=1)
+
 
             yield line
 
@@ -301,18 +317,18 @@ def split_lines(lines):
 
     for line in lines:
         try:
-            k,v = line.split('|')
+            k, v = line.split('|')
             k = k.strip()
             v = v.strip()
-        except ValueError :
+        except ValueError:
             # Some entries have a key and no value
             k = (line.split('|')[0]).strip()
             v = None
 
-        k = k.replace(' TO ','-')
+        k = k.replace(' TO ', '-')
 
         if v:
-            v = v.replace('{}.'.format(k),'').strip()
+            v = v.replace('{}.'.format(k), '').strip()
 
             # There are still a few labels that have numbers at the start
             # Buy only remove 3 or fewer, because a year at the start is valid, such as
@@ -320,11 +336,19 @@ def split_lines(lines):
             v = re.sub('^(\d+)\s+', '', v).strip()
             v = v.capitalize()
 
-        yield (k,v)
+        yield (k, v)
 
 
 def analyze_entries(qn, entries):
-    # Do some analysis:
+    """  Do some analysis
+
+    Mostly breaking up labels that are ranges ( "10 - 100" ) and correcting errors in identifying categoricals
+
+    :param qn:
+    :param entries:
+    :return:
+
+    """
 
     def is_nothing(e):
 
@@ -333,20 +357,23 @@ def analyze_entries(qn, entries):
         else:
             return False
 
-    is_range = any('-' in k for k,v in entries)
+    is_range = any('-' in k for k, v in entries)
 
-    not_categorical = all(is_nothing(v) for k,v in entries) or \
+    not_categorical = all(is_nothing(v) for k, v in entries) or \
                       is_range or \
                       'WEIGHT' in qn or \
                       '_ID_' in qn or \
-                      all( str(k) == str(v) for k,v in entries) or \
-                      'january' in [v.lower() for k,v in entries if v]
+                      all(str(k) == str(v) for k, v in entries) or \
+                      'january' in [v.lower() for k, v in entries if v]
 
     is_categorical = not not_categorical
 
+    if len(entries) <= 2:
+        # Ignore binary values, https://github.com/Metatab/publicdata/issues/9
+        is_categorical == False
+
     if is_categorical:
         # Fix missing entries if it is categorical
-        entries = [ (k,v if v else k) for k,v in entries]
-
+        entries = [(k, v if v else k) for k, v in entries]
 
     return dict(entries), int(is_range), int(is_categorical)

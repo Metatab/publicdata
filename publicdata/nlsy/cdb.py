@@ -284,8 +284,6 @@ def convert_cdb(cdb_file):
 
     labels, qn_to_lid = create_label_sets(procd_value_labels)
 
-
-
     ##
     ## Write meta csv, and extract labels for later.
     with open(csv_meta_file, 'w') as fo:

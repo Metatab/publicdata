@@ -371,6 +371,7 @@ def analyze_entries(qn, entries):
     if len(entries) <= 2:
         # Ignore binary values, https://github.com/Metatab/publicdata/issues/9
         is_categorical == False
+        entries = []
 
     if is_categorical:
         # Fix missing entries if it is categorical

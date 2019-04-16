@@ -44,7 +44,7 @@ class NLSY(object):
 
         self.hdf_file = hdf
 
-        self.f = h5py.File(self.hdf_file)
+        self.f = h5py.File(self.hdf_file,'r')
 
         self.base_name = Path(self.hdf_file).stem
 
@@ -84,41 +84,19 @@ class NLSY(object):
         if self._value_labels is None:
             self._value_labels = self._get_dataframe(self.base_name + '_value_labels')
 
-            # Fix Brokeness: https://github.com/Metatab/publicdata/issues/8
-
-            # These are all cases where there is a ';' in an unexpected place.
-            self._value_labels.replace({
-                '12 FOR SCHOOL EMPLOYEES ONLY': 12,
-                '12  FOR SCHOOL EMPLOYEES ONLY': 12,
-                '3 SCHOOL EMPLOYEES': 3,
-                '3 School employees': 3,
-                '3 Transcript requested': 3,
-                '4 Transcript requested': 4,
-                '5 Transcript requested': 5,
-                '6 Transcript requested': 6,
-                '7 Transcript requested': 7,
-                '7 Transcript not requested': 7,
-                '8 Transcript not requested': 8,
-                '9 Transcript not requested': 9,
-                '10 Transcript not requested': 10,
-                '11 Transcript not requested': 11,
-                'or Advanced Biology': None,
-                '0 FI': 0,
-            }, inplace=True)
-
             self._value_labels['value'] = pd.to_numeric(self._value_labels['value'])
 
             self._value_labels.dropna(inplace=True)
 
             self._value_labels['value'] = self._value_labels['value'].astype('int')
 
-
-
         return self._value_labels
 
-    def get_label_maps(self, df, var_name='question_name'):
+    def _get_label_maps(self, df, var_name):
         """Return a dict of label maps for the columns of a dataframe"""
+
         vl = self.valuelabels
+
         t = vl[vl[var_name].isin(df.columns)]
 
         label_maps = {}
@@ -141,6 +119,16 @@ class NLSY(object):
             label_maps[question_name] = lm
 
         return label_maps
+
+    def get_label_maps(self, df):
+
+        vl1 = self._get_label_maps(df, 'question_name')
+        vl2 = self._get_label_maps(df, 'base_name')
+
+        vl1.update(vl2)
+
+        return vl1
+
 
     @property
     def column_map(self):
@@ -352,7 +340,6 @@ class NLSY(object):
                 raise NlsyError('Failed to join question data frames, '
                                 "probably because some have extra dimensions and others don't: " + str(e))
 
-
             if rmeta:
                 df = df.join(self.respondent_meta.set_index('PUBID'))
 
@@ -376,6 +363,7 @@ class NLSY(object):
 
             if c in lm:
                 df[c] = df[c].astype('category').cat.rename_categories({int(k): v for k, v in lm[c].items()})
+
             pass
 
         return df

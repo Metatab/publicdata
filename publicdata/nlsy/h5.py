@@ -94,6 +94,9 @@ def load_metadata(dat_file ):
             f.create_dataset(dsn, values.shape, dtype=h5py.special_dtype(vlen=str), chunks=True, compression="gzip",
                              data=values)
 
+            if dsn+'_headers' in f:
+                del f[dsn+'_headers']
+
             f.create_dataset(dsn+'_headers',  (len(values.columns),), dtype=h5py.special_dtype(vlen=str), chunks=True,
                              compression="gzip",
                              data=values.columns)

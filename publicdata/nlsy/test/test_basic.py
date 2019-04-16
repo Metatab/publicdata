@@ -18,17 +18,21 @@ class NlsyTest(RowGeneratorTest):
 
 
     def test_labels(self):
-        from os.path import join
+        from os.path import join, dirname
         from publicdata.nlsy.cdb import extract_from_codebook
         from publicdata.nlsy.labels import process_value_labels
 
-        d = '/Users/eric/proj/virt-proj/data-project/sdrdl-data-projects/nlsinfo.org/nlsy97_all_1997-2013'
+        cdb_file = join(dirname(__file__), 'test.cdb')
 
-        cdb_file = join(d, 'nlsy97_all_1997-2013.cdb')
-
-        codeb = extract_from_codebook(cdb_file)
+        codeb = extract_from_codebook(cdb_file, force=True)
 
         l = list(process_value_labels(codeb))
+
+        import yaml
+
+        print(yaml.dump(l, default_flow_style=False))
+
+        print(l[0])
 
 
 import unittest

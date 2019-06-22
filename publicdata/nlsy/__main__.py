@@ -10,11 +10,13 @@ from .cdb import convert_cdb, extract_from_codebook
 from .h5 import convert_nlsy, load_metadata
 from pathlib import Path
 import sys
-
+from . import NlsyError
 def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='Convert an NLSY dataset to HDF5')
+
+    parser.add_argument('-b', '--build', action='store_true', help='Build a full HDF5 file; runs -n -c -m, which is also equivalent to not specifying any of these args. ')
 
     parser.add_argument('-n', '--hdf', action='store_true', help='Create a new hdf5 file.')
 
@@ -27,7 +29,7 @@ def main():
     parser.add_argument('-L','--limit', type=int, help='Set limit for number of rows processed with -e')
 
 
-    parser.add_argument('archive_dir', help='Path to the unpacked NLS archive')
+    parser.add_argument('archive', help='Path NLS download ZIP file')
 
     args = parser.parse_args()
 
@@ -55,15 +57,15 @@ def filemap(z):
 def run(args):
     import sys
 
-    base = Path(args.archive_dir)
+    base = Path(args.archive)
 
     if not base.exists():
-        raise FileNotFoundError(args.archive_dir)
+        raise FileNotFoundError(args.archive)
 
-    if not base.is_dir():
-        raise NotADirectoryError(args.archive_dir)
+    if not base.suffix == '.zip':
+        raise NlsyError('Input file must have a .zip extension ')
 
-    if not any([args.hdf, args.csv, args.extract, args.meta]):
+    if not any([args.hdf, args.csv, args.extract, args.meta]) or args.build:
         args.hdf = args.csv = args.extract = args.meta = 1
 
     if args.hdf:
@@ -94,9 +96,20 @@ def _get_cdb_file(base):
 
     return cdb_file
 
+def unzip(archive):
+    from os import system
+
+    unpack_dir = Path(archive.stem)
+
+    if not unpack_dir.exists():
+        unpack_dir.mkdir(parents=True, exist_ok=True)
+        system("unzip {} -d {} ".format(str(archive),unpack_dir ))
+
+    return unpack_dir
+
 def make_hdf(args):
 
-    base = Path(args.archive_dir)
+    base = unzip(Path(args.archive))
 
     header_file = next(base.glob('**/*.NLSY97'))
 
@@ -112,7 +125,7 @@ def make_hdf(args):
 
 
 def make_csv(args):
-    base = Path(args.archive_dir)
+    base = unzip(Path(args.archive))
 
     print("Create .csv files from codebook")
     wrote_files = convert_cdb(_get_cdb_file(base))
@@ -122,7 +135,7 @@ def make_csv(args):
 
 def make_extract(args):
 
-    base = Path(args.archive_dir)
+    base = unzip(Path(args.archive))
 
     print("Extract codebook to a datastructure")
 
@@ -131,9 +144,11 @@ def make_extract(args):
 
 def make_meta(args):
 
-    base = Path(args.archive_dir)
+    base = unzip(Path(args.archive))
 
     load_metadata(_get_dat_file(base))
+
+
 
 
 if __name__ == "__main__":

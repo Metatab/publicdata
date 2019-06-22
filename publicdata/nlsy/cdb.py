@@ -5,10 +5,14 @@
 Functions for converting the code book, the .cdb file
 """
 
-from pathlib import Path
 import csv
-from tqdm import tqdm
+import hashlib
 import pickle
+from pathlib import Path
+import re
+from tqdm import tqdm
+
+from .cdb_labels import get_remap_dict, process_value_labels
 
 
 def pair_slugify(e):
@@ -28,22 +32,25 @@ def pair_slugify(e):
 
     return value
 
+
 def split_dims(qn):
-    """Extract the base question name, dimensions and comonent from the question name"""
+    """Extract the base question name, dimensions and component from the question name"""
 
-    base_qn, rem = qn.split('.', 1) if '.' in qn else (qn, '')
-    rem = rem.replace('_', '~')  # Seems to be a consistency error
-
-    x, component = rem.split('~') if '~' in rem else (rem, None)
-
-    dims = x.split('.')
+    base_qn, *parts = re.split('([\.\~])', qn)
+    dims = []
+    component = None
+    for t, code in zip(parts[0::2], parts[1::2]):
+        if t == '.':
+            dims.append(code)
+        elif t == '~':
+            component = code
 
     dims += [None] * (3 - len(dims))  # pad to length 3
 
     return [base_qn + ('~' + component if component else '')] + dims + [component]
 
 
-def _extract_from_codebook(f, cb=None, limit = None):
+def _extract_from_codebook(f, cb=None, limit=None):
     """
     Parse the codebook for the NYLS79 full dataset, downloadable from
     https://www.nlsinfo.org/accessing-data-cohorts
@@ -54,7 +61,6 @@ def _extract_from_codebook(f, cb=None, limit = None):
     """
 
     import re
-    import hashlib
 
     vars = []
     var = None
@@ -76,15 +82,15 @@ def _extract_from_codebook(f, cb=None, limit = None):
             var_no += 1
             p = l.split()
 
-            qn =  p[1].replace('[', '').replace(']', '')
+            qn = p[1].replace('[', '').replace(']', '')
 
             base_qn, *dims, component = split_dims(qn)
 
-            question_group,*_ = re.sub('[\!\-\~\.\_\d]','-',base_qn).split('-')
+            question_group, *_ = re.sub('[\!\-\~\.\_\d]', '-', base_qn).split('-')
 
             var = {
                 'var_no': var_no,
-                'col_no': var_no -1,
+                'col_no': var_no - 1,
                 'label_lines': [],
                 'labels_id': None,
                 'is_categorical': None,
@@ -105,26 +111,20 @@ def _extract_from_codebook(f, cb=None, limit = None):
 
             var_labels_done = False
 
-
-
         if len(l.strip()) == 0:
             pass
 
         if var_line == 4:
             var['question'] = l.strip()
 
-
         m = re.search('RESPONSE CHOICE: \"([^\"]+)\"', l)
 
         if m:
             var['response_choice'] = m.group(1)
 
-
-
         m = re.search('(PRIMARY|SECONDARY|TERTIARY) VARIABLE', l)
         if m:
             var['var_level'] = m.group(1)
-
 
         # Mark the indented value labels
         if re.match(r'\-{5,20}', l.strip()) and in_val_labels:  # '-----', the summation line for value counts
@@ -154,7 +154,6 @@ def _extract_from_codebook(f, cb=None, limit = None):
                 if line_no > limit:
                     break
 
-
         var_line += 1
 
     if var:  # Maybe last line doesn't have h-rule marker
@@ -162,9 +161,9 @@ def _extract_from_codebook(f, cb=None, limit = None):
 
     return vars
 
+
 def extract_from_codebook(cdb_file, limit=None, force=False):
     """Extract the code book to a data structure, cached on disk"""
-
 
     pkl_file = Path(cdb_file).with_suffix('.cdb.pkl')
 
@@ -188,11 +187,7 @@ def extract_from_codebook(cdb_file, limit=None, force=False):
             return pickle.load(f)
 
 
-
 def create_label_sets(procd_val_labels):
-    from .labels import get_remap_dict, process_value_labels
-    import hashlib
-
     rd = get_remap_dict(procd_val_labels)
 
     labels = {}
@@ -203,7 +198,7 @@ def create_label_sets(procd_val_labels):
         if is_categorical:
 
             for k, v in list(d.items()):
-                d[k] = rd.get(qn+':'+k,{}).get(k,v)
+                d[k] = rd.get(qn + ':' + k, {}).get(k, v)
 
                 slugs = list(sorted([pair_slugify(e) for e in sorted(d.items())]))
 
@@ -213,17 +208,15 @@ def create_label_sets(procd_val_labels):
 
                 qn_to_hash[qn] = labels_hash
 
-    hash_to_int = { hash:i for i,hash in enumerate(labels.keys())}
+    hash_to_int = {hash: i for i, hash in enumerate(labels.keys())}
 
-    labels = { hash_to_int[hash]:d for hash,d in labels.items()}
-    qn_to_lid = { qn: hash_to_int[hash] for qn,hash in qn_to_hash.items()}
+    labels = {hash_to_int[hash]: d for hash, d in labels.items()}
+    qn_to_lid = {qn: hash_to_int[hash] for qn, hash in qn_to_hash.items()}
 
     return labels, qn_to_lid
 
-def create_reduced_label_sets(procd_val_labels):
-    from .labels import get_remap_dict, process_value_labels
-    import hashlib
 
+def create_reduced_label_sets(procd_val_labels):
     rd = get_remap_dict(procd_val_labels)
 
     labels = {}
@@ -234,7 +227,7 @@ def create_reduced_label_sets(procd_val_labels):
         if is_categorical:
 
             for k, v in list(d.items()):
-                d[k] = rd.get(qn+':'+k,{}).get(k,v)
+                d[k] = rd.get(qn + ':' + k, {}).get(k, v)
 
                 slugs = list(sorted([pair_slugify(e) for e in sorted(d.items())]))
 
@@ -244,10 +237,10 @@ def create_reduced_label_sets(procd_val_labels):
 
                 qn_to_hash[qn] = labels_hash
 
-    hash_to_int = { hash:i for i,hash in enumerate(labels.keys())}
+    hash_to_int = {hash: i for i, hash in enumerate(labels.keys())}
 
-    labels = { hash_to_int[hash]:d for hash,d in labels.items()}
-    qn_to_lid = { qn: hash_to_int[hash] for qn,hash in qn_to_hash.items()}
+    labels = {hash_to_int[hash]: d for hash, d in labels.items()}
+    qn_to_lid = {qn: hash_to_int[hash] for qn, hash in qn_to_hash.items()}
 
     return labels, qn_to_lid
 
@@ -256,11 +249,8 @@ def convert_cdb(cdb_file):
     """Convert a .cdb ( data dictionary) file to CSV and add the data to the
     HDF5 file for the survey data"""
 
-    from tqdm import tqdm
-    from .labels import process_value_labels
-
     csv_meta_file = Path(cdb_file).with_suffix('.meta.csv')
-    csv_labels_file = Path(cdb_file).with_suffix('.labels.csv') # All labels
+    csv_labels_file = Path(cdb_file).with_suffix('.labels.csv')  # All labels
     csv_reducedlabels_file = Path(cdb_file).with_suffix('.rlabels.csv')  # Reduced labels
 
     codeb = extract_from_codebook(cdb_file)
@@ -275,9 +265,9 @@ def convert_cdb(cdb_file):
         wl = csv.writer(fl)
         wl.writerow('question_name base_name value label'.split())
 
-        for i,(qn, base_qn, is_range, is_categorical, d)  in enumerate(tqdm(procd_value_labels, desc='Full Labels')):
+        for i, (qn, base_qn, is_range, is_categorical, d) in enumerate(tqdm(procd_value_labels, desc='Full Labels')):
             if is_categorical:
-                for k,v in d.items():
+                for k, v in d.items():
                     wl.writerow([qn, base_qn, k, v])
 
         wrote_files.append(csv_labels_file)
@@ -293,7 +283,7 @@ def convert_cdb(cdb_file):
             e['labels_id'] = qn_to_lid.get(e['question_name'])
 
             if e['labels_id']:
-                (_, _, e['is_categorical']) = labels[ e['labels_id']]
+                (_, _, e['is_categorical']) = labels[e['labels_id']]
             else:
                 e['is_categorical'] = 0
 
@@ -329,19 +319,20 @@ def convert_cdb(cdb_file):
 
         wrote_files.append(csv_reducedlabels_file)
 
-
     return wrote_files
+
 
 def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='Convert an NLSY codebook to CSV files')
 
-    parser.add_argument('-e', '--extract', action='store_true', help='Only extract the cdb file, ignoring the cached version')
+    parser.add_argument('-e', '--extract', action='store_true',
+                        help='Only extract the cdb file, ignoring the cached version')
 
     parser.add_argument('-c', '--convert', action='store_true', help='Create the meta and label files.')
 
-    parser.add_argument('-L','--limit', type=int, help='set limit for number of rows processed with -e')
+    parser.add_argument('-L', '--limit', type=int, help='set limit for number of rows processed with -e')
 
     parser.add_argument('-l', '--labels', action='store_true',
                         help='Process label lines')
@@ -356,7 +347,7 @@ def main():
     if args.convert:
         convert_cdb(args.cdb_file)
 
+
 if __name__ == "__main__":
     # execute only if run as a script
     main()
-

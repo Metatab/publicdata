@@ -10,6 +10,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 import fuzzy
+from collections import defaultdict
 
 dmeta = fuzzy.DMetaphone()
 
@@ -182,8 +183,7 @@ def process_value_labels(v):
 
 def generate_remap_rows(procd_val_labels):
     """Yield rows that map value labels to names that are more common across questions"""
-    from collections import defaultdict
-    from .labels import cluster_words
+
 
     qn_labels = defaultdict(list)
 
@@ -216,7 +216,7 @@ def generate_remap_rows(procd_val_labels):
 
 
 def get_remap_dict(procd_val_labels):
-    from collections import defaultdict
+
     rd = defaultdict(dict)
 
     for qn, k, cn, label, shortest in generate_remap_rows(procd_val_labels):

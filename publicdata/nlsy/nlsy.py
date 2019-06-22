@@ -5,19 +5,16 @@
 
 """
 
-from itertools import islice
-from math import ceil
+from functools import lru_cache
+from pathlib import Path
+from warnings import warn
 
-import csv
 import h5py
 import numpy as np
 import pandas as pd
-from copy import copy
-from pathlib import Path
 from rowgenerators import Source
 from rowgenerators.appurl.web import WebUrl
-from functools import lru_cache
-
+from functools import reduce
 
 class NlsyUrl(WebUrl):
     pass
@@ -26,9 +23,9 @@ class NlsyUrl(WebUrl):
 class NlsySource(Source):
     pass
 
-class NLSY(object):
 
-    respondent_cols = None # Columns for variables that are about the respondent, across years.
+class NLSY(object):
+    respondent_cols = None  # Columns for variables that are about the respondent, across years.
     f = None
 
     na_labels = {
@@ -44,7 +41,7 @@ class NLSY(object):
 
         self.hdf_file = hdf
 
-        self.f = h5py.File(self.hdf_file,'r')
+        self.f = h5py.File(self.hdf_file, 'r')
 
         self.base_name = Path(self.hdf_file).stem
 
@@ -64,7 +61,7 @@ class NLSY(object):
     @property
     def metadata(self):
         if self._metadata is None:
-            self._metadata = self._get_dataframe(self.base_name+'_variable_labels')
+            self._metadata = self._get_dataframe(self.base_name + '_variable_labels')
 
             # Fix brokenness
             #  https://github.com/Metatab/publicdata/issues/7
@@ -75,7 +72,6 @@ class NLSY(object):
             self._metadata.replace(['nan'], [None], inplace=True)
 
             self._metadata.at[1, 'is_categorical'] = 1
-
 
         return self._metadata
 
@@ -101,7 +97,6 @@ class NLSY(object):
 
         label_maps = {}
 
-
         def maybeint(v):
             try:
                 return int(v)
@@ -112,9 +107,9 @@ class NLSY(object):
         for question_name in g.groups:
             group = g.get_group(question_name)
 
-            lm = dict(zip( [maybeint(e) for e in group.value], group.label))
+            lm = dict(zip([maybeint(e) for e in group.value], group.label))
 
-            #lm.update(self.na_labels)
+            # lm.update(self.na_labels)
 
             label_maps[question_name] = lm
 
@@ -128,7 +123,6 @@ class NLSY(object):
         vl1.update(vl2)
 
         return vl1
-
 
     @property
     def column_map(self):
@@ -166,12 +160,12 @@ class NLSY(object):
         return self._question_map
 
     def columns_meta(self, columns):
-        """Get a dataframe with the dimention numbers and survey year for the
+        """Get a dataframe with the dimension numbers and survey year for the
         given columns"""
         q_meta = self.metadata[self.metadata.variable_name_nd.isin(columns)]
 
-        df =  q_meta[['variable_name_nd', 'survey_year', 'dim1', 'dim2', 'dim3',
-                         'component', 'response_choice']] \
+        df = q_meta[['variable_name_nd', 'survey_year', 'dim1', 'dim2', 'dim3',
+                     'component', 'response_choice']] \
             .replace('nan', np.nan) \
             .dropna(axis=1, how='all')
 
@@ -190,9 +184,7 @@ class NLSY(object):
             self._respondent_meta = self.get_dataframe(self.respondent_cols)
             self._respondent_meta.columns = [self.question_map[c] for c in self._respondent_meta.columns]
 
-        df =  self._respondent_meta.copy()
-
-
+        df = self._respondent_meta.copy()
 
         return df
 
@@ -207,10 +199,9 @@ class NLSY(object):
         else:
             return pd.DataFrame(ds[:], columns=list(headers[:]))
 
-    def get_dataframe(self, col_nos=None ):
+    def get_dataframe(self, col_nos=None):
         """Return a dataframe, with headers from the NLSY HDF5 file"""
-        import h5py
-        import pandas
+
 
         if col_nos is None:
             return self._get_dataframe(self.base_name, col_nos=None)
@@ -219,13 +210,13 @@ class NLSY(object):
                 try:
                     return int(n)
                 except ValueError:
-                    return self.column_map.get(n, n)
+                    return self.column_map.get(n)
 
-            col_nos = sorted([int(mapcolno(n)) for n in col_nos])
+            col_nos = sorted([int(mapcolno(n)) for n in col_nos if mapcolno(n)])
 
             return self._get_dataframe(self.base_name, col_nos=tuple(col_nos))
 
-    def base_question_columns(self,base_qn):
+    def base_question_columns(self, base_qn):
 
         m = self.metadata
 
@@ -274,17 +265,16 @@ class NLSY(object):
         t = t.drop(columns=["variable_name_nd"])
 
         if replacena:
-            t[base_qn] = t[base_qn].where(t[base_qn]>=0, np.nan)
+            t[base_qn] = t[base_qn].where(t[base_qn] >= 0, np.nan)
 
         if agg:
-            t = t.groupby(['PUBID','survey_year']).agg(agg)[base_qn].to_frame().reset_index()
-
+            t = t.groupby(['PUBID', 'survey_year']).agg(agg)[base_qn].to_frame().reset_index()
 
         return t
 
-    def question_dataframe(self, base_qn, rmeta=True, cmeta=True, replacena=False, agg=None):
+    def question_dataframe(self, base_qn=None, rmeta=True, cmeta=True, replacena=False, agg=None):
         """
-        :param base_qn:  Base question, either a single string, or a list of string question names
+        :param base_qn:  Base question, either a single string, or a list of string question names. If None, use all questions
         :param rmeta: If True, link in respondent metadata. Defaults to True
         :param cmeta: If True, link in column metadata. Defaults to True
         :param dropna: If true, replace negative values with Nan. Defaults to True
@@ -318,7 +308,8 @@ class NLSY(object):
 
         """
 
-        from publicdata.nlsy import NlsyError
+        if base_qn is None:
+            base_qn = list(e for e in self.metadata.base_qn.unique() if e != 'PUBID')
 
         if isinstance(base_qn, (list, tuple)):
 
@@ -329,16 +320,20 @@ class NLSY(object):
                 except AttributeError:
                     return agg
 
-            frames = [ self._question_dataframe(e.strip(), False, True,
-                                                replacena=replacena, agg=get_agg(e.strip()))
-                       for e in base_qn ]
+            frames = [self._question_dataframe(e.strip(), False, True,
+                                               replacena=replacena, agg=get_agg(e.strip()))
+                      for e in base_qn]
 
-            from functools import reduce
-            try:
-                df = reduce(lambda x, y: x.join(y, how='outer'), [e.set_index(['PUBID', 'survey_year']) for e in frames])
-            except ValueError as e:
-                raise NlsyError('Failed to join question data frames, '
-                                "probably because some have extra dimensions and others don't: " + str(e))
+            df = frames[0].set_index(['PUBID', 'survey_year'])
+            for i,e in enumerate(frames[0:], 1):
+                try:
+                    e.set_index(['PUBID', 'survey_year'], inplace=True)
+                    df = df.join(e, how='outer')
+                except ValueError as exc:
+                    warn(('Failed to join question data frames, '
+                        "probably because some have extra dimensions and others don't: {}\n"
+                        "For question {}\n{}")
+                        .format(exc, base_qn[i], e.head(3) ))
 
             if rmeta:
                 df = df.join(self.respondent_meta.set_index('PUBID'))
@@ -348,7 +343,7 @@ class NLSY(object):
         else:
             return self._question_dataframe(base_qn.strip(), rmeta, cmeta, replacena, agg)
 
-    def categoricalize(self,df, columns=None):
+    def categoricalize(self, df, columns=None):
         """Convert all of the categorical columns.
         The columns must have question names, not variable names. """
         lm = self.get_label_maps(df)
@@ -368,20 +363,15 @@ class NLSY(object):
 
         return df
 
-
     def dummify(self, df):
         pass
 
-
-
-
     def __getitem__(self, item):
 
-        if not isinstance(item,(list,tuple)):
+        if not isinstance(item, (list, tuple)):
             return self.get_dataframe([item])
         else:
             return self.get_dataframe(list(item))
-
 
 
 class NLSY97(NLSY):
@@ -393,9 +383,10 @@ class NLSY97(NLSY):
     sampling_weight = 'SAMPLING_WEIGHT_CC'
     panel_weight = 'SAMPLING_PANEL_WEIGHT'
 
-    respondent_cols =['PUBID','KEY!SEX','KEY!BDATE_Y', 'KEY!RACE','KEY!ETHNICITY','KEY!RACE_ETHNICITY']
+    respondent_cols = ['PUBID', 'KEY!SEX', 'KEY!BDATE_Y', 'KEY!RACE', 'KEY!ETHNICITY', 'KEY!RACE_ETHNICITY']
     min_respondent_cols = ['PUBID']
+
 
 class NLSY79(NLSY):
     # Variables that only appear in one year, maybe?
-    respondent_cols = ['SAMPLE_ID','SAMPLE_RACE','SAMPLE_SEX','SHIFTSP_86A','VERSION_R26']
+    respondent_cols = ['SAMPLE_ID', 'SAMPLE_RACE', 'SAMPLE_SEX', 'SHIFTSP_86A', 'VERSION_R26']

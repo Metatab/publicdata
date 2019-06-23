@@ -6,6 +6,7 @@
 """
 
 from functools import lru_cache
+from functools import reduce
 from pathlib import Path
 from warnings import warn
 
@@ -14,7 +15,7 @@ import numpy as np
 import pandas as pd
 from rowgenerators import Source
 from rowgenerators.appurl.web import WebUrl
-from functools import reduce
+
 
 class NlsyUrl(WebUrl):
     pass
@@ -39,7 +40,11 @@ class NLSY(object):
 
     def __init__(self, hdf):
 
-        self.hdf_file = hdf
+        self.hdf_file = Path(hdf)
+
+        if self.hdf_file.is_dir():
+            # Assume it is an archive directory, properly named
+            self.hdf_file = self.hdf_file.joinpath(self.hdf_file.name + '.h5')
 
         self.f = h5py.File(self.hdf_file, 'r')
 
@@ -166,8 +171,8 @@ class NLSY(object):
 
         df = q_meta[['variable_name_nd', 'survey_year', 'dim1', 'dim2', 'dim3',
                      'component', 'response_choice']] \
-            .replace('nan', np.nan) \
-            .dropna(axis=1, how='all')
+            .replace('nan', np.nan)  # \
+        # .dropna(axis=1, how='all') # drops columns with no values
 
         try:
             df['survey_year'] = df.survey_year.astype(int)
@@ -201,7 +206,6 @@ class NLSY(object):
 
     def get_dataframe(self, col_nos=None):
         """Return a dataframe, with headers from the NLSY HDF5 file"""
-
 
         if col_nos is None:
             return self._get_dataframe(self.base_name, col_nos=None)
@@ -248,6 +252,10 @@ class NLSY(object):
         df = self[cols]
 
         respondent_meta = self.respondent_meta
+
+        # Maybe didn't get all of the respondent meta columns, so reset to the ones we have
+        rmeta =[ c for c in self.respondent_meta.columns if c in rmeta]
+
         assert len(respondent_meta) == len(df)
 
         t = respondent_meta[rmeta].join(df).melt(id_vars=rmeta, var_name='variable_name_nd', value_name=base_qn)
@@ -257,6 +265,7 @@ class NLSY(object):
             t = t.merge(columns_meta, on="variable_name_nd")
 
             col_order = list(t.columns)
+            # Move the observation column to the end
             col_order.remove(base_qn)
             col_order += [base_qn]
 
@@ -264,20 +273,34 @@ class NLSY(object):
 
         t = t.drop(columns=["variable_name_nd"])
 
+        # The N/A Values are all less than or equal to 0, so we can replace all of them
+        # with NaN
         if replacena:
             t[base_qn] = t[base_qn].where(t[base_qn] >= 0, np.nan)
 
         if agg:
             t = t.groupby(['PUBID', 'survey_year']).agg(agg)[base_qn].to_frame().reset_index()
 
+        t.drop(columns=['component', 'response_choice'], errors='ignore', inplace=True)
+
+        # Fix some odd issues with the dimensions getting the wrong type
+        for dc in ['dim1', 'dim2', 'dim3']:
+            if dc in t.columns:
+                t[dc] = pd.to_numeric(t[dc], errors='coerce')
+
+        # Survey year can be a string, so make it always a string
+        if 'survey_year' in t.columns:
+            t['survey_year'] = t['survey_year'].astype(str)
+
         return t
 
-    def question_dataframe(self, base_qn=None, rmeta=True, cmeta=True, replacena=False, agg=None):
+    def question_dataframe(self, base_qn=None, rmeta=True, cmeta=True, replacena=True, dropna=True, agg=None):
         """
         :param base_qn:  Base question, either a single string, or a list of string question names. If None, use all questions
         :param rmeta: If True, link in respondent metadata. Defaults to True
         :param cmeta: If True, link in column metadata. Defaults to True
-        :param dropna: If true, replace negative values with Nan. Defaults to True
+        :param replacena: If true, replace negative values with Nan. Defaults to True
+        :param dropna: If true, drop columns that are all null. Defaults to True
         :param agg: If set, group the dataframe on PUBID and survey year, and apply this aggregation function
         :return:
 
@@ -313,6 +336,12 @@ class NLSY(object):
 
         if isinstance(base_qn, (list, tuple)):
 
+            # Uniquify
+            _base_qn, base_qn = base_qn, []
+            for e in _base_qn:
+                if e not in base_qn:
+                    base_qn.append(e)
+
             def get_agg(base_qn):
 
                 try:
@@ -324,24 +353,51 @@ class NLSY(object):
                                                replacena=replacena, agg=get_agg(e.strip()))
                       for e in base_qn]
 
-            df = frames[0].set_index(['PUBID', 'survey_year'])
-            for i,e in enumerate(frames[0:], 1):
+            index_cols = list(reduce(lambda x, y: x | set(y.columns[:-1]), frames, set()))
+
+            # reorder to the standard order
+            index_cols = [e for e in self.all_dims if e in index_cols]
+
+            df = frames[0].set_index(index_cols)
+
+            for i, e in enumerate(frames[1:], 1):
+
                 try:
-                    e.set_index(['PUBID', 'survey_year'], inplace=True)
+                    e.set_index(index_cols, inplace=True)
+
                     df = df.join(e, how='outer')
                 except ValueError as exc:
+
                     warn(('Failed to join question data frames, '
-                        "probably because some have extra dimensions and others don't: {}\n"
-                        "For question {}\n{}")
-                        .format(exc, base_qn[i], e.head(3) ))
+                          "probably because some have extra dimensions and others don't: {}\n"
+                          "For question {}\n{}")
+                         .format(exc, base_qn[i], e.head(3)))
+                except TypeError as exc:
+                    # This case is for debugging instances of a column having mixed types.
+                    raise
+
+                    for c in df.reset_index().columns:
+                        print(c, set(type(e) for e in df.reset_index()[c]))
+                    print('----')
+                    for c in e.reset_index().columns:
+                        print(c, set(type(e) for e in e.reset_index()[c]))
+
 
             if rmeta:
-                df = df.join(self.respondent_meta.set_index('PUBID'))
+                # Avoid overlapping columns if some of the rmeta columns are included
+                # among the requested questions
+                rm_cols = self.respondent_meta.columns
+                df_cols = [c for c in df.columns if c not in rm_cols]
 
-            return df
+                df = df[df_cols].join(self.respondent_meta.set_index('PUBID'))
 
         else:
-            return self._question_dataframe(base_qn.strip(), rmeta, cmeta, replacena, agg)
+            df = self._question_dataframe(base_qn.strip(), rmeta, cmeta, replacena, agg)
+
+        if dropna:
+            return df.reset_index().dropna(axis=1, how='all')  # drops columns with no values
+        else:
+            return df.reset_index()
 
     def categoricalize(self, df, columns=None):
         """Convert all of the categorical columns.
@@ -373,6 +429,12 @@ class NLSY(object):
         else:
             return self.get_dataframe(list(item))
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.close()
+
 
 class NLSY97(NLSY):
     # Variables that only appear in one year.
@@ -382,6 +444,8 @@ class NLSY97(NLSY):
 
     sampling_weight = 'SAMPLING_WEIGHT_CC'
     panel_weight = 'SAMPLING_PANEL_WEIGHT'
+
+    all_dims = ['PUBID', 'survey_year', 'dim1', 'dim2', 'dim3', 'component', 'response_choice']
 
     respondent_cols = ['PUBID', 'KEY!SEX', 'KEY!BDATE_Y', 'KEY!RACE', 'KEY!ETHNICITY', 'KEY!RACE_ETHNICITY']
     min_respondent_cols = ['PUBID']

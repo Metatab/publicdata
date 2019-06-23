@@ -36,6 +36,13 @@ def pair_slugify(e):
 def split_dims(qn):
     """Extract the base question name, dimensions and component from the question name"""
 
+    # There are occasionally '_' characters that should be '~'
+    if '.' in qn and '_' in qn:
+        a,b = qn.split('.',1)
+        if '_' in b:
+            b = b.replace('_','~')
+            qn = a+'.'+b
+
     base_qn, *parts = re.split('([\.\~])', qn)
     dims = []
     component = None
@@ -43,6 +50,8 @@ def split_dims(qn):
         if t == '.':
             dims.append(code)
         elif t == '~':
+            component = code
+        elif t == '_': # Appears to be an error in the source data
             component = code
 
     dims += [None] * (3 - len(dims))  # pad to length 3

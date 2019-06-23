@@ -39,6 +39,9 @@ setup(
             "CRJSON+ = publicdata.census.censusreporter:CensusReporterSource",
             "census: = publicdata.census.files.generators:CensusSource",
             "censusgeo: = publicdata.census.files.generators:CensusGeoSource"
+        ],
+        'console_scripts': [
+            'nlsy = publicdata.nlsy.__main__:main'
         ]
     },
 )

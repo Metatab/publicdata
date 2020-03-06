@@ -71,7 +71,7 @@ class CensusReporterUrl(CensusUrl):
                 cache.settext(self.cache_key, json.dumps(data, indent=4))
 
         return parse_app_url(cache.getsyspath(self.cache_key),
-                             fragment=[join(*self.path_parts),None],
+                             target_file=join(*self.path_parts),
                              ).as_type(CensusReporterJsonUrl)
 
     def get_target(self):

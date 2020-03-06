@@ -15,7 +15,7 @@ class CensusReporterJsonUrl(FileUrl):
     def __init__(self, url=None, downloader=None, **kwargs):
         super().__init__(url, downloader, **kwargs)
 
-        # HACK This hsould be handled properly in parse_app_url
+        # HACK This should be handled properly in parse_app_url
         self._fragment = kwargs.get('_fragment')
         self.scheme_extension = 'CRJSON'
 

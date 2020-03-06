@@ -49,7 +49,7 @@ class CensusReporterSource(Source):
         return self._columns
 
     # noinspection PyUnusedLocal
-    def dataframe(self, limit=None):
+    def dataframe(self, limit=None, *args, **kwargs):
         """
         Return a CensusReporterDataframe
         :param limit: Limit is ignored

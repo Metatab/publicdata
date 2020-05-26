@@ -8,7 +8,7 @@ if sys.argv[-1] == 'publish':
 
 setup(
     name='publicdata',
-    version='0.3.9',
+    version='0.3.10',
     url='https://github.com/CivicKnowledge/publicdata',
     license='MIT',
     author='Eric Busboom',
@@ -25,7 +25,8 @@ setup(
         'tqdm',
         'fuzzy', # For NLSY
         'nltk', # for NLSY
-        'stringdist' # For NLSY
+        'stringdist', # For NLSY
+        'fredapi' # For FRED
         ],
     entry_points={
         'appurl.urls': [
@@ -33,7 +34,9 @@ setup(
             "censusreportergeo: = publicdata.census.censusreporter:CensusReporterShapeURL",
             "census: = publicdata.census.files.appurl:CensusFile",
             "censusgeo: = publicdata.census.files.appurl:CensusGeoUrl",
-            "nlsy+ = publicdata.nlsy.appurl:NlsyUrl"
+            "censusapi: = publicdata.census.api.url:CensusApiUrl",
+            "nlsy+ = publicdata.nlsy.appurl:NlsyUrl",
+            "fred: = publicdata.fred.appurl:FredUrl"
         ],
         'rowgenerators': [
             "CRJSON+ = publicdata.census.censusreporter:CensusReporterSource",
@@ -42,7 +45,12 @@ setup(
         ],
         'console_scripts': [
             'nlsy = publicdata.nlsy.__main__:main'
+        ],
+        'mt.subcommands': [
+            'fred=publicdata.fred.cli:fred',
         ]
+
+
     },
 )
 

@@ -23,7 +23,7 @@ class CensusFileUrl(CensusUrl):
 
     """
 
-    default_year = 2017
+    default_year = 2018
 
     def __init__(self, url=None, downloader=None, **kwargs):
 
@@ -129,6 +129,7 @@ class CensusGeoUrl(CensusFileUrl):
         return parse_app_url(us)
 
     def get_resource(self):
+
         return self.shape_url.get_resource()
 
     def geoframe(self):

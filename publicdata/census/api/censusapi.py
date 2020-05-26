@@ -10,16 +10,13 @@ from textwrap import fill
 
 import requests
 from terminaltables import AsciiTable as TermTable
-from .util import nl2br
-
-from publicdata.censusreporter.exceptions import  AccessException
-
+from publicdata.census.util import nl2br, slugify
+from rowgenerators import get_cache
+from publicdata.census.censusreporter.exceptions import AccessException
 
 def _cached_get(url, cache=True):
     """Return the results of a GET request, possibly cached.
     Assumes the response is JSON"""
-
-    from publicdata.censusreporter.util import get_cache, slugify
 
     cache_fs = get_cache()
 
@@ -142,6 +139,8 @@ class DatasetMeta(UserDict):
 
     def fetch_url(self, *get, geo_for=None, geo_in=None, **predicates):
         from six.moves.urllib.parse import urlencode, quote_plus
+
+
 
         d = dict(
             get=','.join(quote_plus(e) for e in get)
@@ -321,3 +320,5 @@ class CensusApi(object):
 
             if d.get('identifier', '').endswith('/' + ident):
                 return DatasetMeta(d)
+
+

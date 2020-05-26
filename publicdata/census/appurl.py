@@ -16,7 +16,7 @@ class CensusUrl(Url):
 
     For instance:
 
-        census:/05000US06073/140/B17001
+        census://05000US06073/140/B17001
 
         census://<year>/<release/<geoid>/<summarylevel>/<table>
         census://<geoid>/<summarylevel>/<table>

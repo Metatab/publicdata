@@ -236,8 +236,9 @@ def tiger_url(year, summary_level, stusab=None):
 
     base =  f'shape+ftp://ftp2.census.gov/geo/tiger/TIGER{year}/{sl.upper()}'
 
-    if sl in ('COUNTY', 'CBSA', 'CSA'):
+    if sl in ('COUNTY', 'CBSA', 'CSA','STATE'):
         return base+f'/tl_{year}_us_{sl.lower()}.zip'
     else:
+        assert state is not None, (year, sl)
         return base+f'/tl_{year}_{state:02}_{sl.lower()}.zip'
 

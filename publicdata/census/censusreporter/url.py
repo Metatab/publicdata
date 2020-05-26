@@ -70,9 +70,11 @@ class CensusReporterUrl(CensusUrl):
                 cache.makedirs(dirname(self.cache_key), recreate=True)
                 cache.settext(self.cache_key, json.dumps(data, indent=4))
 
-        return parse_app_url(cache.getsyspath(self.cache_key),
+        pu =  parse_app_url(cache.getsyspath(self.cache_key),
                              target_file=join(*self.path_parts),
                              ).as_type(CensusReporterJsonUrl)
+
+        return pu
 
     def get_target(self):
         # get_resource returns a CensusReporterJsonUrl so this should never be called

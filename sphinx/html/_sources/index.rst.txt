@@ -1,0 +1,33 @@
+.. Public Data documentation master file, created by
+   sphinx-quickstart on Tue May 12 14:06:11 2020.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Public Data
+===========
+
+
+Census
+------
+
+.. toctree::
+   :maxdepth: 2
+
+   census
+
+National Longitudinal Survey of Youth
+-------------------------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   nlsy
+
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

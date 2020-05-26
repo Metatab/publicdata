@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>US Census &#8212; Public Data 0.3.10 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="National Longitudinal Survey of Youth" href="nlsy.html" />
+    <link rel="prev" title="Public Data" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="us-census">
+<h1>US Census<a class="headerlink" href="#us-census" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="census-reporter">
+<h2>Census Reporter<a class="headerlink" href="#census-reporter" title="Permalink to this headline">¶</a></h2>
+<p>The general process for creating a census package is similar to the package process described in the <a class="reference external" href="https://github.com/CivicKnowledge/metatab-py/blob/master/docs/GettingStarted.rst">Getting Started tutorial,</a> but with a <code class="docutils literal notranslate"><span class="pre">DataFile</span></code> term that uses a program to fetch data from Census Reporter. First we’ll create the program, then link it into a Metatab package. The program uses the <cite>pandas-reporter</cite> module, so the reation process is very similar to the <a class="reference external" href="https://github.com/CivicKnowledge/pandas-reporter/blob/master/test/Pandas%20Reporter%20Examples.ipynb">Pandas-Reporter tutorial.</a></p>
+</div>
+<div class="section" id="creating-a-pandas-reporter-program">
+<h2>Creating a Pandas-Reporter program<a class="headerlink" href="#creating-a-pandas-reporter-program" title="Permalink to this headline">¶</a></h2>
+<p>First, read the <a class="reference external" href="https://github.com/CivicKnowledge/pandas-reporter/blob/master/test/Pandas%20Reporter%20Examples.ipynb">Pandas-Reporter tutorial.</a> You’l need to install the <cite>pandasreporter</cite> python module.</p>
+<p>Then, visit <a class="reference external" href="http://censusreporter.org">Census Reporter</a> to locate information about tables, regions and  and summary levels.</p>
+<p>For this tutorial, we will use these tables:</p>
+<ul class="simple">
+<li><p>B17001, Poverty Status by Sex by Age</p></li>
+<li><p>B17024, Age by Ratio of Income to Poverty Level</p></li>
+<li><p>B17017, Poverty Status by Household Type by Age of Householder</p></li>
+</ul>
+<p>For the geography, we will use tracts in San Diego County.</p>
+<p>To find the geoid code for San Diego County, visit the main page at <a class="reference external" href="http://censusreporter.org">Census Reporter</a> and search for San Diego County. You should get a <cite>profile page for the county &lt;https://censusreporter.org/profiles/05000US06073-san-diego-county-ca/&gt; ‘_. In the URL for the page, you should see the code `05000US06073</cite>. This code is the geoid for San Diego County.</p>
+<p>Next, visit the page for <a class="reference external" href="https://www.census.gov/geo/maps-data/data/summary_level.html">Cartographic Boundary File Summary Level Codes</a> to get the summary level code for tracts. It is actually listed by all of its components, in this case,       “State-County-Census Tract.” It is code “140”. ( BTW, that is a string, not a number. )</p>
+<p>The start of our program is similar to the program in the <a class="reference external" href="https://github.com/CivicKnowledge/pandas-reporter/blob/master/test/Pandas%20Reporter%20Examples.ipynb">Pandas-Reporter tutorial.</a>, except using the table, summary level and region codes for this example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>$ mkdir example-data-package
+$ cd example-data-package
+$ metapack -c
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Public Data</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">US Census</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#census-reporter">Census Reporter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-a-pandas-reporter-program">Creating a Pandas-Reporter program</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="nlsy.html">National Longitudinal Survey of Youth</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Public Data</a></li>
+      <li>Next: <a href="nlsy.html" title="next chapter">National Longitudinal Survey of Youth</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Eric Busboom.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.0.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/census.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

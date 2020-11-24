@@ -30,18 +30,12 @@ setup(
         ],
     entry_points={
         'appurl.urls': [
-            "censusreporter: = publicdata.census.censusreporter:CensusReporterURL",
-            "censusreportergeo: = publicdata.census.censusreporter:CensusReporterShapeURL",
-            "census: = publicdata.census.files.appurl:CensusFile",
-            "censusgeo: = publicdata.census.files.appurl:CensusGeoUrl",
-            "censusapi: = publicdata.census.api.url:CensusApiUrl",
+
             "nlsy+ = publicdata.nlsy.appurl:NlsyUrl",
             "fred: = publicdata.fred.appurl:FredUrl"
         ],
         'rowgenerators': [
-            "CRJSON+ = publicdata.census.censusreporter:CensusReporterSource",
-            "census: = publicdata.census.files.generators:CensusSource",
-            "censusgeo: = publicdata.census.files.generators:CensusGeoSource"
+
         ],
         'console_scripts': [
             'nlsy = publicdata.nlsy.__main__:main'

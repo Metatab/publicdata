@@ -6,7 +6,7 @@ from itertools import islice
 
 
 def extract(resource, doc, *args, **kwargs):
-    """Extract rows from an FFIEC disclosire file, from a collection of Root.References,
+    """Extract rows from an FFIEC disclosure file, from a collection of Root.References,
     for a given prefix
 
     This function is used as a program URL in a Root.DataFile term:
